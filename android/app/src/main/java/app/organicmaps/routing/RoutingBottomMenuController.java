@@ -261,7 +261,7 @@ final class RoutingBottomMenuController implements View.OnClickListener
     bindHeaderTime(!info.trip && (info.startTrip != null || info.alternatives.length > 0 || info.alternativesPending));
     com.google.android.material.button.MaterialButton mobilly = mTransitFrame.findViewById(R.id.transit_mobilly);
     // During a trip the validate button lives in the "now" card, for the ride it belongs to.
-    mValidateRide = info.trip ? null : MobillyShortcut.nextKnownVehicle(info.journeyLegs);
+    mValidateRide = info.trip ? null : TicketApps.nextKnownVehicle(info.journeyLegs);
     bindValidate(mobilly, mSheet.isExpanded() ? null : mValidateRide);
     android.widget.TextView description = mTransitFrame.findViewById(R.id.transit_description);
     mDescription = styleDescription(info);
@@ -1019,7 +1019,7 @@ final class RoutingBottomMenuController implements View.OnClickListener
     button.setVisibility(ride == null ? View.GONE : View.VISIBLE);
     if (ride == null) return;
     // style() hides the button when the vehicle is unknown and no ticket app is installed.
-    MobillyShortcut.style(button, ride.vehicleNumber);
+    TicketApps.style(button, ride);
     button.setText(TransitBadge.prefix(ride, button.getText(), mContext.getResources().getDisplayMetrics().density));
     button.setContentDescription(app.organicmaps.transit.RigaModeStyle.name(mContext, ride.type) + " " + ride.number
                                  + ". " + button.getText().toString().substring(ride.number.length()).trim());

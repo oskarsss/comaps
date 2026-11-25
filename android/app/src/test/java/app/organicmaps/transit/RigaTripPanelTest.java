@@ -26,7 +26,7 @@ public class RigaTripPanelTest
     TransitJourneyLeg bus = new TransitJourneyLeg(TransitStepType.BUS, "49", "Sarkandaugava", 0xfff2b327, 0, false,
         new TransitJourneyLeg.Stop[] {stop("Dienvidu tilts bus", T + 10 * MIN, 56.9305),
             stop("A", T + 13 * MIN, 56.940), stop("B", T + 16 * MIN, 56.950), stop("Pavasara gatve", T + 19 * MIN, 56.960)});
-    bus.validatable = true;
+    bus.ticketing = "rigas-satiksme";
     return new TransitJourneyLeg[] {
         new TransitJourneyLeg(TransitStepType.PEDESTRIAN, "", "", 0, 150, false,
             new TransitJourneyLeg.Stop[] {stop("Ludzas iela", T, 56.918), stop("Lido", T + 2 * MIN, 56.920)}),

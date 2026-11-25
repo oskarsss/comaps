@@ -1280,8 +1280,8 @@ public final class RigaRouteProvider implements RoutingController.TransitProvide
             + ", number " + (!live.isEmpty() ? live : next != null ? "expected at the stop " + next
                 : journeyLeg.vehicleNumber.isEmpty() ? "none" : "remembered " + journeyLeg.vehicleNumber));
       }
-      // Only Rīgas satiksme lines (their shapes are "riga_...") are validated in Mobilly and similar apps.
-      journeyLeg.validatable = leg.trip != null && leg.trip.shapeId.startsWith("riga_");
+      if (mLive && leg.trip != null && RigaLiveSettings.tracks(leg.trip.id))
+        journeyLeg.ticketing = RigaLiveSettings.TICKETING.id();
       journeyLeg.lines = group.lines.toArray(new String[0]);
       journeyLeg.also = group.also;
       journeyLeg.alsoLines = group.alsoLines;

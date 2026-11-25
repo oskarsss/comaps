@@ -179,13 +179,13 @@ final class TransitItinerary
           MaterialTextView live=text("● "+leg.progress,15,true);live.setTextColor(accent());
           live.setPadding(0,dp(4),0,dp(4));body.addView(live);
         }
-        if(MobillyShortcut.validates(leg))
+        if(TicketApps.validates(leg))
         {
-          MaterialButton validate=(MaterialButton)LayoutInflater.from(mContext).inflate(R.layout.riga_mobilly_button,body,false);
-          boolean mobilly=MobillyShortcut.style(validate,leg.vehicleNumber);
+          MaterialButton validate=(MaterialButton)LayoutInflater.from(mContext).inflate(R.layout.ticket_app_button,body,false);
+          boolean opensApp=TicketApps.style(validate,leg);
           LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-2,-2);params.topMargin=dp(4);
           if(validate.getVisibility()!=android.view.View.GONE)body.addView(validate,params);
-          if(mobilly)body.addView(text(mContext.getString(leg.vehicleNumber.isEmpty()?R.string.riga_validate_hint_scan
+          if(opensApp)body.addView(text(mContext.getString(leg.vehicleNumber.isEmpty()?R.string.riga_validate_hint_scan
               :R.string.riga_validate_hint),13,false));
         }
         stop(body,first,mContext.getString(R.string.riga_board,first.name),first.departure,leg.delay);

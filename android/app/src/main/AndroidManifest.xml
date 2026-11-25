@@ -60,7 +60,8 @@
       android:protectionLevel="dangerous" />
 
   <queries>
-    <!-- Riga ticket apps (Mobilly, Rīgas satiksme, Timey); their icons mark the validation shortcut. -->
+    <!-- Ticket apps named in the transit feed data (TransitTicketing): Android shows CoMaps only the apps listed
+         here, plus any app handling an operator's vehicle link below. -->
     <package android:name="lv.mobilly.android"/>
     <package android:name="com.flutter.rspassenger"/>
     <package android:name="com.ntacticsoftware.rigapublictransport"/>

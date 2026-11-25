@@ -238,7 +238,7 @@ public final class RigaTripPanel
   private static int validatable(TransitJourneyLeg[] legs, int ride)
   {
     if (ride < 0 || !legs[ride].isRide()) return -1;
-    return legs[ride].validatable ? ride : -1; // Rīgas satiksme rides only
+    return TransitTicketing.of(legs[ride].ticketing) != null ? ride : -1;
   }
 
   /** Whole minutes until {@code at}, rounded up; 0 when it is now or past. */

@@ -49,7 +49,7 @@ public class ManageRouteTest
     TransitJourneyLeg leg = new TransitJourneyLeg(type, "15", "Mežciems", 0, 0, false,
         new TransitJourneyLeg.Stop[] {new TransitJourneyLeg.Stop("A", 0, 0, 56.95, 24.10),
                                       new TransitJourneyLeg.Stop("B", Long.MAX_VALUE, Long.MAX_VALUE, 56.96, 24.11)});
-    leg.validatable = validatable;
+    leg.ticketing = validatable ? "rigas-satiksme" : "";
     return leg;
   }
 
@@ -58,9 +58,9 @@ public class ManageRouteTest
     TransitJourneyLeg train = leg(TransitStepType.TRAIN, false);
     TransitJourneyLeg bus = leg(TransitStepType.BUS, true);
     train.vehicleNumber = "8001"; // a live vehicle alone does not make a ride validated in Mobilly
-    assertFalse(MobillyShortcut.validates(train));
-    assertTrue(MobillyShortcut.validates(bus));
-    assertSame(bus, MobillyShortcut.nextKnownVehicle(new TransitJourneyLeg[] {train, bus}));
-    assertNull(MobillyShortcut.nextKnownVehicle(new TransitJourneyLeg[] {train}));
+    assertFalse(TicketApps.validates(train));
+    assertTrue(TicketApps.validates(bus));
+    assertSame(bus, TicketApps.nextKnownVehicle(new TransitJourneyLeg[] {train, bus}));
+    assertNull(TicketApps.nextKnownVehicle(new TransitJourneyLeg[] {train}));
   }
 }

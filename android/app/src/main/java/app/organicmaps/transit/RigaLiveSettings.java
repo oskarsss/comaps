@@ -12,6 +12,14 @@ public final class RigaLiveSettings
   private static final String LIVE = "live";
   private static final String ASKED = "asked";
 
+  /**
+   * Rīgas satiksme riders validate in these apps; the QR sticker by every door carries rsat://a/<fleet number>,
+   * and the fleet number comes from this feed.
+   */
+  static final TransitTicketing TICKETING =
+      new TransitTicketing("rigas-satiksme", "rsat://a/{vehicle}", "lv.mobilly.android", "com.flutter.rspassenger",
+                           "com.ntacticsoftware.rigapublictransport");
+
   private RigaLiveSettings() {}
   public static SharedPreferences preferences(Context context) { return context.getSharedPreferences("riga-routing",0); }
 
@@ -19,6 +27,15 @@ public final class RigaLiveSettings
   public static boolean available()
   {
     return LatviaTimetables.mapDownloaded();
+  }
+
+  /** Whether the feed follows a trip: it tracks Rīgas satiksme vehicles, whose timetable alone has no id prefix. */
+  static boolean tracks(String tripId)
+  {
+    for (RigaTransitFeeds.Source source : RigaTransitFeeds.SOURCES)
+      if (!source.prefix.isEmpty() && tripId.startsWith(source.prefix))
+        return false;
+    return !tripId.isEmpty();
   }
 
   public static boolean live(Context context)

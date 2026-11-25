@@ -122,7 +122,6 @@
   <string name="riga_live_now">now</string>
   <string name="riga_departures_title">Departures</string>
   <string name="riga_departures_scheduled">Timetable times</string>
-  <string name="riga_validate_mobilly">Validate in Mobilly · vehicle %1$s</string>
   <string name="riga_validate_hint">After boarding, check that the number matches the sticker by the door</string>
   <!-- A route looked up for earlier today: how long ago it left. -->
   <plurals name="riga_live_minutes_ago">

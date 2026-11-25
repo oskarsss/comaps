@@ -22,8 +22,11 @@ public final class TransitJourneyLeg
   public int vehicleStopsAway = -1;
   /** Fleet number of the matched live vehicle (the number on its ticket-validation sticker); empty when unknown. */
   public String vehicleNumber = "";
-  /** A Rīgas satiksme ride: validated in a ticket app by the vehicle's fleet number or QR sticker. */
-  public boolean validatable;
+  /**
+   * The ticketing this ride is validated through, given by the live feed that tracks it (validation needs the
+   * vehicle's fleet number); empty when no live feed tracks the ride or live data is off.
+   */
+  public String ticketing = "";
   /** Lines making the same ride (same boarding and exit stop), this leg's own first; empty for walks. */
   public String[] lines = new String[0];
   /** Other departures of the same ride from the boarding stop (epoch ms) and the line of each. */

@@ -45,15 +45,56 @@ public class TransitItineraryTest
   Shown shown=new Shown(controller.setup().get());shown.itinerary.update(info,null);
   Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(100));return shown;
  }
- private static void installMobilly() { install("lv.mobilly.android"); }
- private static void install(String name) {
+ private static void installMobilly() { install("lv.mobilly.android","Mobilly",true); }
+ /** An installed app with its launcher label; {@code link}: it handles the rsat:// sticker link. */
+ private static void install(String name,String label,boolean link) {
   android.content.pm.PackageInfo app=new android.content.pm.PackageInfo();app.packageName=name;
   app.applicationInfo=new android.content.pm.ApplicationInfo();app.applicationInfo.packageName=name;
-  Shadows.shadowOf(RuntimeEnvironment.getApplication().getPackageManager()).installPackage(app);
+  app.applicationInfo.nonLocalizedLabel=label;
+  var packages=Shadows.shadowOf(RuntimeEnvironment.getApplication().getPackageManager());
+  packages.installPackage(app);
+  if(!link)return;
+  android.content.ComponentName activity=new android.content.ComponentName(name,name+".Validate");
+  packages.addActivityIfNotPresent(activity);
+  android.content.IntentFilter filter=new android.content.IntentFilter(android.content.Intent.ACTION_VIEW);
+  filter.addDataScheme("rsat");filter.addCategory(android.content.Intent.CATEGORY_DEFAULT);
+  try{packages.addIntentFilterForActivity(activity,filter);}catch(Exception e){throw new AssertionError(e);}
+ }
+ private static android.content.Intent openedOnTap(Shown shown,String text) {
+  find(shown.root,text).performClick();
+  Shadows.shadowOf(Looper.getMainLooper()).idle();
+  return Shadows.shadowOf(shown.activity).getNextStartedActivity();
+ }
+ @Test public void anAppHandlingTheStickerLinkIsOfferedWithoutBeingNamedInCoMaps() {
+  install("org.example.tickets","City Tickets",true);
+  TransitRouteInfo info=route();info.journeyLegs[0].vehicleNumber="17529";info.journeyLegs[0].ticketing="rigas-satiksme";
+  ReflectionHelpers.setField(RoutingController.get(),"mCachedTransitRouteInfo",info);
+  android.content.Intent opened=openedOnTap(show(RoutingController.get().getCachedTransitInfo()),"Validate in City Tickets");
+  assertEquals("rsat://a/17529",opened.getDataString());
+  assertEquals("org.example.tickets",opened.getPackage());
+ }
+ @Test public void withSeveralAppsTheFirstTapAsksThenTheLastUsedOpensAndALongPressAsksAgain() {
+  installMobilly();install("com.ntacticsoftware.rigapublictransport","Timey",false);
+  TransitRouteInfo info=route();info.journeyLegs[0].vehicleNumber="17529";info.journeyLegs[0].ticketing="rigas-satiksme";
+  ReflectionHelpers.setField(RoutingController.get(),"mCachedTransitRouteInfo",info);
+  Shown shown=show(RoutingController.get().getCachedTransitInfo());
+  assertNull(openedOnTap(shown,"Validate in Mobilly"));
+  android.app.Dialog dialog=org.robolectric.shadows.ShadowDialog.getLatestDialog();
+  android.widget.ListView list=((androidx.appcompat.app.AlertDialog)dialog).getListView();
+  assertEquals(2,list.getCount());
+  list.performItemClick(list.getAdapter().getView(1,null,list),1,1);   // Timey
+  Shadows.shadowOf(Looper.getMainLooper()).idle();
+  Shadows.shadowOf(shown.activity).getNextStartedActivity();
+  Shown again=show(RoutingController.get().getCachedTransitInfo());
+  assertNotNull(find(again.root,"Validate in Timey"));          // remembered
+  assertNull(find(again.root,"Validate in Mobilly"));
+  find(again.root,"Validate in Timey").performLongClick();
+  Shadows.shadowOf(Looper.getMainLooper()).idle();
+  assertEquals(2,((androidx.appcompat.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog()).getListView().getCount());
  }
  @Test public void timeyWithoutStickerLinkGetsTheFleetNumberOnTheClipboard() {
-  install("com.ntacticsoftware.rigapublictransport");
-  TransitRouteInfo info=route();info.journeyLegs[0].vehicleNumber="17529";info.journeyLegs[0].validatable=true;
+  install("com.ntacticsoftware.rigapublictransport","Timey",false);
+  TransitRouteInfo info=route();info.journeyLegs[0].vehicleNumber="17529";info.journeyLegs[0].ticketing="rigas-satiksme";
   ReflectionHelpers.setField(RoutingController.get(),"mCachedTransitRouteInfo",info);
   Shown shown=show(RoutingController.get().getCachedTransitInfo());FragmentActivity activity=shown.activity;
   find(shown.root,"Validate in Timey").performClick();
@@ -63,7 +104,7 @@ public class TransitItineraryTest
   assertEquals("17529",clipboard.getPrimaryClip().getItemAt(0).getText().toString());
  }
  @Test public void withoutMobillyTheFleetNumberIsCopiedInsteadOfAStoreLink() {
-  TransitRouteInfo info=route();info.journeyLegs[0].vehicleNumber="17529";info.journeyLegs[0].validatable=true;
+  TransitRouteInfo info=route();info.journeyLegs[0].vehicleNumber="17529";info.journeyLegs[0].ticketing="rigas-satiksme";
   ReflectionHelpers.setField(RoutingController.get(),"mCachedTransitRouteInfo",info);
   Shown shown=show(RoutingController.get().getCachedTransitInfo());FragmentActivity activity=shown.activity;
   assertNull(find(shown.root,"Validate in Mobilly"));
@@ -76,7 +117,7 @@ public class TransitItineraryTest
  }
  @Test public void liveVehicleOffersMobillyValidationWithItsFleetNumber() {
   installMobilly();
-  TransitRouteInfo info=route();info.journeyLegs[0].vehicleNumber="17529";info.journeyLegs[0].validatable=true;
+  TransitRouteInfo info=route();info.journeyLegs[0].vehicleNumber="17529";info.journeyLegs[0].ticketing="rigas-satiksme";
   ReflectionHelpers.setField(RoutingController.get(),"mCachedTransitRouteInfo",info);
   Shown shown=show(RoutingController.get().getCachedTransitInfo());FragmentActivity activity=shown.activity;
   find(shown.root,"Validate in Mobilly").performClick();
