@@ -29,6 +29,8 @@ target_link_libraries(${PROJECT_NAME}
     indexer
 )
 
+add_subdirectory(timetable)
+
 if (PLATFORM_DESKTOP)
     add_subdirectory(world_feed)
 endif()
