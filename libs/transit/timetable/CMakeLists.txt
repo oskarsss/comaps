@@ -22,4 +22,5 @@ target_link_libraries(${PROJECT_NAME}
 if (PLATFORM_DESKTOP AND NOT WIN32)
   add_subdirectory(builder)
   omim_add_tool_subdirectory(timetable_tool)
+  omim_add_test_subdirectory(timetable_tests)
 endif()
