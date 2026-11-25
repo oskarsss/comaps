@@ -405,6 +405,7 @@ dependencies {
     // Test Dependencies
     androidTestImplementation(libs.androidx.test.junit)
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
     testImplementation(libs.mockito.core)
 }
 
