@@ -5,6 +5,9 @@
 #include "base/assert.hpp"
 #include "base/math.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 namespace df
 {
 namespace
@@ -171,7 +174,7 @@ std::vector<glsl::vec2> GenerateJoinNormals(dp::LineJoin joinType, glsl::vec2 co
   else
   {
     double const segmentAngle = math::pi / 8.0;
-    double const fullAngle = acos(glsl::dot(normal1, normal2));
+    double const fullAngle = acos(std::clamp(static_cast<double>(glsl::dot(normal1, normal2)), -1.0, 1.0));
     int segmentsCount = static_cast<int>(fullAngle / segmentAngle);
     if (segmentsCount == 0)
       segmentsCount = 1;
