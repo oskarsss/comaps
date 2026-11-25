@@ -63,10 +63,12 @@ class CountryInfoGetter;
 namespace routing
 {
 class NumMwmIds;
+class IndexRouter;
 using NumMwmId = std::uint16_t;
 RouterType GetLastUsedRouter();
 }  // namespace routing
 
+namespace traffic { class TrafficCache; }
 class DataSource;
 
 namespace power_management
@@ -148,6 +150,10 @@ public:
   routing::RoutingSession const & RoutingSession() const { return m_routingSession; }
   routing::RoutingSession & RoutingSession() { return m_routingSession; }
   void SetRouter(routing::RouterType type);
+
+  // Independent, bounded pedestrian query for transit access/egress. Does not alter the session.
+  void ResetPedestrianConnections();
+  std::vector<double> CalculatePedestrianConnection(m2::PointD const & from, m2::PointD const & to);
   routing::RouterType GetRouter() const { return m_currentRouterType; }
   bool IsRoutingActive() const { return m_routingSession.IsActive(); }
   bool IsRouteBuilt() const { return m_routingSession.IsBuilt(); }
@@ -429,6 +435,9 @@ private:
   extrapolation::Extrapolator m_extrapolator;
 
   std::vector<dp::DrapeID> m_drapeSubroutes;
+  std::mutex m_pedestrianMutex;
+  std::unique_ptr<traffic::TrafficCache> m_pedestrianTraffic;
+  std::unique_ptr<routing::IndexRouter> m_pedestrianRouter;
   mutable std::mutex m_drapeSubroutesMutex;
 
   std::unique_ptr<location::GpsInfo> m_gpsInfoCache;

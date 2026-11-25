@@ -172,6 +172,18 @@ public class Framework
 
   public static native void nativeClearApiPoints();
 
+  /** Replaces only transient vehicle markers. Call on the main thread; empty arrays clear the layer. */
+  public static native void nativeSetLiveVehicles(double[] coordinates, String[] labels);
+  /** Worker-thread query: seconds, metres, then lat/lon pairs; one negative routing code means failure. */
+  public static native void nativeResetPedestrianConnections();
+  public static native double[] nativePedestrianConnection(double fromLat, double fromLon, double toLat, double toLon);
+
+  public static void nativeSetRigaJourney(double[][] lines, boolean[] walking)
+  { nativeDrawRigaJourney(lines, walking, true); }
+  public static native void nativeDrawRigaJourney(double[][] lines, boolean[] walking, boolean fit);
+  public static native void nativeDrawColoredRigaJourney(double[][] lines, boolean[] walking, int[] colors, boolean fit);
+  public static native void nativeSetJourneyVehicles(double[] coordinates, String[] numbers, int[] colors, String[] titles);
+
   @NonNull
   public static native @RequestType int nativeParseAndSetApiUrl(String url);
   public static native ParsedRoutingData nativeGetParsedRoutingData();
@@ -212,6 +224,7 @@ public class Framework
   public static native void nativeBuildRoute();
 
   public static native void nativeRemoveRoute();
+  public static native void nativeCancelRouteBuild();
 
   public static native void nativeFollowRoute();
 

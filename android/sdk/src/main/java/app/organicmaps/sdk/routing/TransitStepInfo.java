@@ -23,8 +23,11 @@ public final class TransitStepInfo
   private final String mNumber;
   private final int mColor;
   private final int mIntermediateIndex;
+  private int mStopCount = -1;
+  public int getStopCount() { return mStopCount; }
+  public TransitStepInfo withStopCount(int count) { mStopCount=count;return this; }
 
-  private TransitStepInfo(int type, @Nullable String distance, @Nullable String distanceUnits, int timeInSec,
+  public TransitStepInfo(int type, @Nullable String distance, @Nullable String distanceUnits, int timeInSec,
                           @Nullable String number, int color, int intermediateIndex)
   {
     mType = TransitStepType.values()[type];

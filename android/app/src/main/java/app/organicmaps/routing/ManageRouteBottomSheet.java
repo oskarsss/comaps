@@ -10,16 +10,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import app.organicmaps.MwmApplication;
 import app.organicmaps.R;
 import app.organicmaps.sdk.Framework;
-import app.organicmaps.sdk.bookmarks.data.MapObject;
 import app.organicmaps.sdk.routing.RouteMarkData;
 import app.organicmaps.sdk.routing.RoutingController;
 import app.organicmaps.util.UiUtils;
@@ -34,7 +31,8 @@ public class ManageRouteBottomSheet
 {
   ManageRouteAdapter mManageRouteAdapter;
   ItemTouchHelper mTouchHelper;
-  ImageView mMyLocationImageView;
+  private boolean mStayChanged;
+  private boolean mPlanned;
 
   @Override
   public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState)
@@ -47,8 +45,9 @@ public class ManageRouteBottomSheet
     MaterialButton planButton = v.findViewById(R.id.btn__plan);
     planButton.setOnClickListener(this);
 
-    mMyLocationImageView = v.findViewById(R.id.image_my_location);
-    mMyLocationImageView.setOnClickListener(this);
+    MaterialButton addStopButton = v.findViewById(R.id.btn__add_stop);
+    addStopButton.setOnClickListener(this);
+    UiUtils.showIf(RoutingController.get().isStopPointAllowed(), addStopButton);
 
     RecyclerView manageRouteList = v.findViewById(R.id.manage_route_list);
     LinearLayoutManager layoutManager = new LinearLayoutManager(getContext());
@@ -107,42 +106,91 @@ public class ManageRouteBottomSheet
       // Close dialog if 'Cancel' button is pressed.
       dismiss();
     }
-    else if (buttonId == R.id.image_my_location)
-    {
-      // Get current location.
-      MapObject myLocation = MwmApplication.from(requireContext()).getLocationHelper().getMyPosition();
-
-      // Set 'My Location' as starting point of the route.
-      if (myLocation != null)
-        mManageRouteAdapter.setMyLocationAsStartingPoint(myLocation);
-    }
     else if (buttonId == R.id.btn__plan)
     {
-      // Get route points from adapter.
-      ArrayList<RouteMarkData> newRoutePoints = mManageRouteAdapter.getRoutePoints();
-
-      // Make sure that the new route contains at least 2 points (start and destination).
-      assert (newRoutePoints.size() >= 2);
-
-      // Remove all existing route points.
-      Framework.nativeRemoveRoutePoints();
-
-      // First, add the destination point.
-      Framework.addRoutePoint(newRoutePoints.get(newRoutePoints.size() - 1));
-
-      // Secondly, add the starting point.
-      Framework.addRoutePoint(newRoutePoints.get(0));
-
-      // And then, add all intermediate points (with no reordering).
-      for (int pos = 1; pos < newRoutePoints.size() - 1; pos++)
-        Framework.addRoutePoint(newRoutePoints.get(pos), false);
+      applyRoutePoints();
 
       // Launch route planning.
+      mPlanned = true;
       RoutingController.get().launchPlanning();
 
       // Dismiss (close) manage route bottom sheet.
       dismiss();
     }
+    else if (buttonId == R.id.btn__add_stop)
+    {
+      // Edits made here are kept: the new stop joins the route as it is now listed.
+      if (!sameAsRoute(mManageRouteAdapter.getRoutePoints(), Framework.nativeGetRoutePoints()))
+      {
+        applyRoutePoints();
+        mPlanned = true;
+        RoutingController.get().launchPlanning();
+      }
+      else if (mStayChanged)
+      {
+        mPlanned = true;
+        RoutingController.get().checkAndBuildRoute();
+      }
+      // The same stop-picking search as the route panel's "Add stop"; the pick adds the stop and re-plans.
+      RoutingBottomMenuListener listener =
+          getActivity() instanceof RoutingBottomMenuListener l ? l : null;
+      dismiss();
+      if (listener != null)
+        listener.onSearchRoutePoint(app.organicmaps.sdk.routing.RouteMarkType.Intermediate);
+    }
+  }
+
+  /** Replaces the route's points with the ones listed here, in their listed order. */
+  private void applyRoutePoints()
+  {
+    // Get route points from adapter.
+    ArrayList<RouteMarkData> newRoutePoints = mManageRouteAdapter.getRoutePoints();
+
+    // Make sure that the new route contains at least 2 points (start and destination).
+    assert (newRoutePoints.size() >= 2);
+
+    // Remove all existing route points.
+    Framework.nativeRemoveRoutePoints();
+
+    // First, add the destination point.
+    Framework.addRoutePoint(newRoutePoints.get(newRoutePoints.size() - 1));
+
+    // Secondly, add the starting point.
+    Framework.addRoutePoint(newRoutePoints.get(0));
+
+    // And then, add all intermediate points (with no reordering).
+    for (int pos = 1; pos < newRoutePoints.size() - 1; pos++)
+      Framework.addRoutePoint(newRoutePoints.get(pos), false);
+  }
+
+  /** Whether {@code listed} is the route as it stands: the same places, in the same order. */
+  static boolean sameAsRoute(@NonNull java.util.List<RouteMarkData> listed, @NonNull RouteMarkData[] route)
+  {
+    if (listed.size() != route.length)
+      return false;
+    for (int i = 0; i < route.length; ++i)
+    {
+      RouteMarkData a = listed.get(i), b = route[i];
+      if (a.mIsMyPosition != b.mIsMyPosition || a.mLat != b.mLat || a.mLon != b.mLon)
+        return false;
+    }
+    return true;
+  }
+
+  @Override
+  public void onStayChanged()
+  {
+    mStayChanged = true;
+  }
+
+  @Override
+  public void onDismiss(@NonNull android.content.DialogInterface dialog)
+  {
+    super.onDismiss(dialog);
+    // A stay changed here counts even when the sheet is closed without "Plan".
+    if (mStayChanged && !mPlanned)
+      RoutingController.get().checkAndBuildRoute();
+    mStayChanged = false;
   }
 
   @Override
@@ -150,15 +198,6 @@ public class ManageRouteBottomSheet
   {
     // Start dragging.
     mTouchHelper.startDrag(viewHolder);
-  }
-
-  @Override
-  public void showMyLocationIcon(boolean showMyLocationIcon)
-  {
-    // Get current location.
-    MapObject myLocation = MwmApplication.from(requireContext()).getLocationHelper().getMyPosition();
-
-    UiUtils.showIf(showMyLocationIcon && myLocation != null, mMyLocationImageView);
   }
 
   @Override

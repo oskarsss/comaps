@@ -10,6 +10,7 @@
 #include "map/power_management/power_management_schemas.hpp"
 #include "map/track_mark.hpp"
 #include "map/user_mark.hpp"
+#include "map/live_vehicle_mark.hpp"
 
 #include "ge0/url_generator.hpp"
 
@@ -633,6 +634,10 @@ void Framework::FillUserMarkInfo(UserMark const * mark, place_page::Info & outIn
   switch (mark->GetMarkType())
   {
   case UserMark::Type::API: FillApiMarkInfo(*static_cast<ApiMarkPoint const *>(mark), outInfo); break;
+  case UserMark::Type::LIVE_VEHICLE:
+    FillNotMatchedPlaceInfo(outInfo, mark->GetPivot(), static_cast<LiveVehicleMark const *>(mark)->GetTitle());
+    outInfo.SetCanEditOrAdd(false);
+    break;
   case UserMark::Type::BOOKMARK: FillBookmarkInfo(*static_cast<Bookmark const *>(mark), outInfo); break;
   case UserMark::Type::SEARCH: FillSearchResultInfo(*static_cast<SearchMarkPoint const *>(mark), outInfo); break;
   case UserMark::Type::ROUTING: FillRouteMarkInfo(*static_cast<RouteMarkPoint const *>(mark), outInfo); break;

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.preference.PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto">
+
+  <androidx.preference.PreferenceCategory
+    android:key="live_feeds_sources"
+    android:title="@string/live_feeds_sources"
+    app:iconSpaceReserved="false">
+    <SwitchPreferenceCompat
+      android:key="live_feed_riga"
+      android:persistent="false"
+      android:title="@string/live_feed_riga"
+      android:summary="@string/live_feed_riga_summary"
+      app:iconSpaceReserved="false"
+      app:singleLineTitle="false" />
+    <Preference
+      android:key="live_feeds_none"
+      android:selectable="false"
+      android:summary="@string/live_feeds_none"
+      app:iconSpaceReserved="false" />
+  </androidx.preference.PreferenceCategory>
+
+  <Preference
+    android:key="live_feeds_about"
+    android:selectable="false"
+    android:summary="@string/live_feeds_about"
+    app:iconSpaceReserved="false" />
+</androidx.preference.PreferenceScreen>

@@ -81,6 +81,7 @@ public class RoutingController
   private int mLastBuildProgress;
   private Router mLastRouterType;
 
+  private LocationHelper mLocationHelper;
   private boolean mHasContainerSavedState;
   private boolean mContainsCachedResult;
   private int mLastResultCode;
@@ -105,6 +106,7 @@ public class RoutingController
     @Override
     public void onRoutingEvent(final int resultCode, @Nullable final String[] missingMaps)
     {
+      if (mExternalTransit) return;
       Logger.d(TAG, "onRoutingEvent(resultCode: " + resultCode + ")");
       mLastResultCode = resultCode;
       mLastMissingMaps = missingMaps;
@@ -244,7 +246,7 @@ public class RoutingController
 
   private boolean isDrivingOptionsBuildError()
   {
-    return mLastResultCode != ResultCodes.NEED_MORE_MAPS && !isRulerRouterType() && RoutingOptions.hasAnyOptions(mLastRouterType);
+    return !mExternalTransit && mLastResultCode != ResultCodes.NEED_MORE_MAPS && !isRulerRouterType() && RoutingOptions.hasAnyOptions(mLastRouterType);
   }
 
   private void setState(State newState)
@@ -296,7 +298,14 @@ public class RoutingController
   public void attach(@NonNull Container container)
   {
     mContainer = container;
+    setTransitVisible(true);
     mContainer.onTurnPreviewChanged(mIsPreviewingTurn, mPreviewedTurnSegmentIndex);
+    // A stop picked in the search (a screen of its own) is added while no screen is attached: tell the map now.
+    if (mAddedStopUnseen)
+    {
+      mAddedStopUnseen = false;
+      mContainer.onAddedStop();
+    }
   }
 
   public boolean isPreviewingTurn()
@@ -306,6 +315,7 @@ public class RoutingController
 
   public void initialize(@NonNull LocationHelper locationHelper)
   {
+    mLocationHelper = locationHelper;
     mLastRouterType = Router.getLastUsed();
     mInvalidRoutePointsTransactionId = Framework.nativeInvalidRoutePointsTransactionId();
     mRemovingIntermediatePointsTransactionId = mInvalidRoutePointsTransactionId;
@@ -321,6 +331,7 @@ public class RoutingController
 
   public void detach()
   {
+    setTransitVisible(false);
     mContainer = null;
   }
 
@@ -344,8 +355,133 @@ public class RoutingController
     mHasContainerSavedState = true;
   }
 
+  /** App-supplied transit engine; other modes and unsupported coordinates use core routing. */
+  @Nullable
+  public TransitProvider getTransitProvider()
+  {
+    return mTransitProvider;
+  }
+
+  public interface TransitProvider
+  {
+    boolean supports(MapObject start, MapObject finish);
+    void build(MapObject start, MapObject finish, java.util.function.Consumer<TransitResult> callback);
+    void cancel();
+    default void setVisible(boolean visible) {}
+    /** Whether {@link #setStops} is honoured: a journey through stops where the rider spends time. */
+    default boolean supportsStops() { return false; }
+    /** The route's intermediate stops, in order, for the next {@link #build}. */
+    default void setStops(java.util.List<RouteMarkData> stops) {}
+    /** Background estimate for the mode chips: {first departure, arrival} in epoch ms, or {@code null}. */
+    default void estimate(MapObject start, MapObject finish, java.util.function.Consumer<long[]> done)
+    {
+      done.accept(null);
+    }
+  }
+
+  public static final class TransitResult
+  {
+    public enum Kind { PENDING, TERMINAL, ROUTE, REFRESH }
+    public Kind kind;
+    public boolean fit = true;
+    public String[] missingMaps = new String[0];
+    public int[] colors = new int[0];
+    public double[] vehicleCoordinates = new double[0];
+    public String[] vehicleNumbers = new String[0];
+    public String[] vehicleTitles = new String[0];
+    public int[] vehicleColors = new int[0];
+    public long vehicleExpires;
+    public final TransitRouteInfo info;
+    public final double[][] lines;
+    public final boolean[] walking;
+    public final String message;
+    public final String actionLabel;
+    public final Runnable action;
+    public TransitResult(String message, String actionLabel, Runnable action)
+    { this.kind = action == null ? Kind.PENDING : Kind.TERMINAL;
+      this.info = null; this.lines = null; this.walking = null;
+      this.message = message; this.actionLabel = actionLabel; this.action = action; }
+    public TransitResult(TransitRouteInfo info, double[][] lines, boolean[] walking)
+    { this.kind = Kind.ROUTE; this.info = info; this.lines = lines; this.walking = walking;
+      this.message = null; this.actionLabel = null; this.action = null; }
+  }
+
+  private TransitProvider mTransitProvider;
+  private double[][] mTransitLines;
+  private boolean[] mTransitWalking;
+  private int[] mTransitColors;
+  private int mTransitFitRevision;
+  /** Increments whenever a newly planned transport journey asks for the camera to frame it. */
+  public int getTransitFitRevision() { return mTransitFitRevision; }
+  /** Frames the current transport journey again, e.g. after the visible map area changed. */
+  public void refitTransit()
+  {
+    if (mExternalTransit && mTransitLines != null)
+      Framework.nativeDrawColoredRigaJourney(mTransitLines, mTransitWalking, mTransitColors, true);
+  }
+  /**
+   * Draws the current transport journey again where it is, e.g. after the map style changed between day and
+   * night: its colours are chosen for the style at draw time.
+   */
+  public void redrawTransit()
+  {
+    if (mExternalTransit && mTransitLines != null)
+      Framework.nativeDrawColoredRigaJourney(mTransitLines, mTransitWalking, mTransitColors, false);
+  }
+  private TransitResult mTransitStatus;
+  public TransitResult getTransitStatus() { return mTransitStatus; }
+  public boolean isRigaTransit()
+  {
+    MapObject from = getStartPoint(), to = getEndPoint();
+    return mLastRouterType == Router.Transit && mTransitProvider != null && from != null && to != null
+        && mTransitProvider.supports(from,to);
+  }
+  private void transitTerminal(String message, String label, Runnable action)
+  {
+    mTransitStatus = new TransitResult(message,label,action);
+    mTransitStatus.kind = TransitResult.Kind.TERMINAL;
+    setBuildState(BuildState.ERROR);
+    mLastBuildProgress = 0;
+    updateProgress();
+  }
+  private boolean mExternalTransit;
+  private boolean mTransitVisible;
+  private final Runnable mClearTransitVehicles = () -> Framework.nativeSetJourneyVehicles(
+      new double[0],new String[0],new int[0],new String[0]);
+  private void clearTransitVehicles()
+  {
+    UiThread.cancelDelayedTasks(mClearTransitVehicles);
+    mClearTransitVehicles.run();
+  }
+  private int mTransitGeneration;
+  public void setTransitVisible(boolean visible)
+  {
+    mTransitVisible=visible;
+    if (!visible && mExternalTransit) clearTransitVehicles();
+    if (mTransitProvider != null) mTransitProvider.setVisible(visible);
+  }
+  public void setTransitProvider(TransitProvider provider) { mTransitProvider = provider; }
+
+  private void cancelTransit()
+  {
+    ++mTransitGeneration;
+    mTransitStatus = null;
+    if (mTransitProvider != null) mTransitProvider.cancel();
+    // The journey is no longer drawn: nothing to draw again when the style changes.
+    mTransitLines = null;
+    mTransitWalking = null;
+    mTransitColors = null;
+    if (mExternalTransit)
+    {
+      Framework.nativeSetRigaJourney(new double[0][], new boolean[0]);
+      clearTransitVehicles();
+    }
+    mExternalTransit = false;
+  }
+
   private void build()
   {
+    cancelTransit();
     Framework.nativeRemoveRoute();
 
     Logger.d(TAG, "build");
@@ -357,6 +493,115 @@ public class RoutingController
 
     updatePlan();
 
+    MapObject from = getStartPoint();
+    MapObject to = getEndPoint();
+    if (mLastRouterType == Router.Transit && mTransitProvider != null && from != null && to != null
+        && (from.isMyPosition() || to.isMyPosition()))
+    {
+      MapObject position = mLocationHelper == null ? null : mLocationHelper.getMyPosition();
+      if (position != null)
+      {
+        if (from.isMyPosition()) from = position;
+        if (to.isMyPosition()) to = position;
+        setPointsInternal(from,to);
+      }
+    }
+    if (mLastRouterType == Router.Transit && mTransitProvider != null && from != null && to != null
+        && mTransitProvider.supports(from, to))
+    {
+      mExternalTransit = true;
+      Framework.nativeCancelRouteBuild();
+      RouteMarkData[] routePoints = Framework.nativeGetRoutePoints();
+      java.util.List<RouteMarkData> stops = new java.util.ArrayList<>();
+      for (RouteMarkData point : routePoints)
+        if (point.mPointType == RouteMarkType.Intermediate) stops.add(point);
+      stops.sort(java.util.Comparator.comparingInt(point -> point.mIntermediateIndex));
+      if (!stops.isEmpty() && !mTransitProvider.supportsStops())
+      {
+        transitTerminal("Public transport routes can't include stops.", "Remove stops", () -> {
+          Framework.nativeRemoveIntermediateRoutePoints(); checkAndBuildRoute();
+        });
+        return;
+      }
+      mTransitProvider.setStops(stops);
+      if (from.isMyPosition() || to.isMyPosition())
+      {
+        MapObject position = mLocationHelper == null ? null : mLocationHelper.getMyPosition();
+        if (position == null)
+        {
+          transitTerminal("Waiting for your location…", "Try again", this::checkAndBuildRoute);
+          return;
+        }
+        if (from.isMyPosition()) from = position;
+        if (to.isMyPosition()) to = position;
+        setPointsInternal(from,to);
+        if (!mTransitProvider.supports(from,to))
+        {
+          mExternalTransit=false;Framework.nativeBuildRoute();return;
+        }
+      }
+      if (from.getLat() == to.getLat() && from.getLon() == to.getLon())
+      {
+        transitTerminal("Choose different start and destination points.", "Manage route", this::checkAndBuildRoute);
+        return;
+      }
+      final int generation = mTransitGeneration;
+      mTransitProvider.build(from, to, result -> UiThread.run(() -> {
+        if (generation != mTransitGeneration || !mExternalTransit) return;
+        if (result != null && result.info == null)
+        {
+          clearTransitVehicles();
+          mTransitStatus = result;
+          if (result.kind == TransitResult.Kind.TERMINAL)
+          {
+            setBuildState(BuildState.ERROR);
+            mLastBuildProgress = 0;
+          }
+          updateProgress();
+          if (result.missingMaps.length > 0)
+          {
+            mLastResultCode=ResultCodes.NEED_MORE_MAPS;mLastMissingMaps=result.missingMaps;
+            mContainsCachedResult=true;processRoutingEvent();
+          }
+          return;
+        }
+        mTransitStatus = null;
+        mLastResultCode = result == null ? ResultCodes.ROUTE_NOT_FOUND : ResultCodes.NO_ERROR;
+        mLastMissingMaps = null;
+        mContainsCachedResult = true;
+        if (result != null)
+        {
+          mCachedRoutingInfo = null;
+          mCachedTransitRouteInfo = result.info;
+          Framework.nativeDrawColoredRigaJourney(result.lines, result.walking, result.colors,
+              result.kind != TransitResult.Kind.REFRESH && result.fit);
+          mTransitLines = result.lines; mTransitWalking = result.walking; mTransitColors = result.colors;
+          if (result.kind != TransitResult.Kind.REFRESH && result.fit) ++mTransitFitRevision;
+          clearTransitVehicles();
+          long remaining = result.vehicleExpires - System.currentTimeMillis();
+          if (remaining > 0 && mContainer != null && mTransitVisible)
+          {
+            Framework.nativeSetJourneyVehicles(result.vehicleCoordinates,result.vehicleNumbers,
+                result.vehicleColors,result.vehicleTitles);
+            UiThread.runLater(mClearTransitVehicles,remaining);
+          }
+          java.util.List<JunctionInfo> points = new java.util.ArrayList<>();
+          for (double[] line : result.lines)
+            for (int i = 0; i + 1 < line.length; i += 2) points.add(new JunctionInfo(line[i], line[i + 1]));
+          mRouteGeometry = RouteGeometry.from(mRouteGeometry.mRevision + 1,
+              points.toArray(new JunctionInfo[0]), Framework.nativeGetRoutePoints());
+          notifyRouteChanged();
+          if (result.kind != TransitResult.Kind.REFRESH)
+          {
+            setBuildState(BuildState.BUILT);
+            mLastBuildProgress = 100;
+            if (mContainer != null) mContainer.onBuiltRoute();
+          }
+        }
+        processRoutingEvent();
+      }));
+      return;
+    }
     Framework.nativeBuildRoute();
   }
 
@@ -431,10 +676,24 @@ public class RoutingController
     Framework.nativeFollowRoute();
   }
 
+  @Nullable
+  private MapObject mLastAddedStop;
+  /** A stop was added while no screen was attached to hear of it. */
+  private boolean mAddedStopUnseen;
+
+  /** The stop added last, for telling the rider how long the plan stays there. */
+  @Nullable
+  public MapObject getLastAddedStop()
+  {
+    return mLastAddedStop;
+  }
+
   public void addStop(@NonNull MapObject mapObject)
   {
+    mLastAddedStop = mapObject;
     addRoutePoint(RouteMarkType.Intermediate, mapObject);
     build();
+    mAddedStopUnseen = mContainer == null;
     if (mContainer != null)
       mContainer.onAddedStop();
     resetToPlanningStateIfNavigating();
@@ -445,9 +704,19 @@ public class RoutingController
     RoutePointInfo info = mapObject.getRoutePointInfo();
     if (info == null)
       throw new AssertionError("A stop point must have the route point info!");
+    removeRoutePoint(info.mMarkType, info.mIntermediateIndex);
+  }
 
+  /** Takes the route's stop (intermediate point) {@code index} out and plans again. */
+  public void removeStop(int index)
+  {
+    removeRoutePoint(RouteMarkType.Intermediate, index);
+  }
+
+  private void removeRoutePoint(@NonNull RouteMarkType type, int index)
+  {
     applyRemovingIntermediatePointsTransaction();
-    Framework.nativeRemoveRoutePoint(info.mMarkType, info.mIntermediateIndex);
+    Framework.nativeRemoveRoutePoint(type, index);
     build();
     if (mContainer != null)
       mContainer.onRemovedStop();
@@ -495,7 +764,20 @@ public class RoutingController
 
   public boolean isStopPointAllowed()
   {
+    // A public transport plan has no native route (it is closed before the provider plans), so the native check
+    // would refuse stops that the provider plans with; within the same native limit, stops are welcome.
+    if (isTransitPlanWithStops())
+      return Framework.nativeGetRoutePoints().length < MAX_ROUTE_POINTS;
     return Framework.nativeCouldAddIntermediatePoint();
+  }
+
+  /** RoutePointsLayout::kMaxIntermediatePointsCount + start and finish. */
+  private static final int MAX_ROUTE_POINTS = 102;
+
+  /** A public transport plan by a provider that plans through stops (multi-stop journeys). */
+  public boolean isTransitPlanWithStops()
+  {
+    return mExternalTransit && mTransitProvider != null && mTransitProvider.supportsStops() && isPlanning();
   }
 
   public boolean isRoutePoint(@NonNull MapObject mapObject)
@@ -511,6 +793,7 @@ public class RoutingController
   private void cancelInternal()
   {
     Logger.d(TAG, "cancelInternal");
+    cancelTransit();
 
     mWaitingPoiPickType = null;
 
@@ -652,6 +935,13 @@ public class RoutingController
   public boolean isWaitingPoiPick()
   {
     return mWaitingPoiPickType != null;
+  }
+
+  /** Which route point a search or map tap is picking now, or null when none is. */
+  @Nullable
+  public RouteMarkType getWaitingPoiPickType()
+  {
+    return mWaitingPoiPickType;
   }
 
   public BuildState getBuildState()
@@ -829,7 +1119,9 @@ public class RoutingController
     Pair<String, String> description = getDescriptionForPoint(point);
     Framework.nativeAddRoutePoint(description.first /* title */, description.second /* subtitle */, type,
                                   0 /* intermediateIndex */, point.isMyPosition(), point.getLat(), point.getLon(),
-                                  true /* reorderIntermediatePoints */);
+                                  // Only a new stop is placed between the others; replacing the start or the
+                                  // finish (a transit build does it for "my position") keeps their order.
+                                  type == RouteMarkType.Intermediate /* reorderIntermediatePoints */);
   }
 
   @NonNull
@@ -921,8 +1213,18 @@ public class RoutingController
     if (!isWaitingPoiPick())
       return;
 
-    if (mWaitingPoiPickType != RouteMarkType.Start && mWaitingPoiPickType != RouteMarkType.Finish)
-      throw new AssertionError("Only start and finish points can be added through search!");
+    if (mWaitingPoiPickType == RouteMarkType.Intermediate)
+    {
+      mWaitingPoiPickType = null;
+      if (point != null)
+        addStop(point);
+      if (mContainer != null)
+      {
+        mContainer.updateMenu();
+        showRoutePlan();
+      }
+      return;
+    }
 
     if (point != null)
     {

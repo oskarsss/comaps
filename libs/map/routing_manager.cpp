@@ -65,6 +65,7 @@
 #include <cstdint>
 #include <limits>
 #include <map>
+#include <optional>
 #include <numbers>
 
 #include "cppjansson/cppjansson.hpp"
@@ -610,6 +611,50 @@ void RoutingManager::Init(std::shared_ptr<routing::NumMwmIds> ptr)
   m_numMwmTree = MakeNumMwmTree(*m_numMwmIDs, m_callbacks.m_countryInfoGetter());
 
   SetRouterImpl(GetLastUsedRouter());
+}
+
+void RoutingManager::ResetPedestrianConnections()
+{
+  std::lock_guard<std::mutex> lock(m_pedestrianMutex);
+  m_pedestrianRouter.reset();
+  m_pedestrianTraffic.reset();
+}
+
+std::vector<double> RoutingManager::CalculatePedestrianConnection(m2::PointD const & from, m2::PointD const & to)
+{
+  std::lock_guard<std::mutex> lock(m_pedestrianMutex);
+  if (!m_numMwmIDs || !m_numMwmTree)
+    return {};
+  auto country = [this](m2::PointD const & p)
+  { return m_callbacks.m_countryInfoGetter().GetRegionCountryId(p); };
+  auto rect = [this](std::string const & id)
+  { return m_callbacks.m_countryInfoGetter().GetLimitRectForLeaf(id); };
+  if (!m_pedestrianRouter)
+  {
+    m_pedestrianTraffic = std::make_unique<traffic::TrafficCache>();
+    m_pedestrianRouter = std::make_unique<IndexRouter>(VehicleType::Pedestrian, true,
+        m_callbacks.m_countryParentNameGetterFn, country, rect, m_numMwmIDs, m_numMwmTree,
+        *m_pedestrianTraffic, m_callbacks.m_dataSourceGetter());
+    m_pedestrianRouter->ReusePedestrianGraph();
+  }
+  RouterDelegate delegate;
+  delegate.SetTimeout(15);
+  Route route("transit-access", 0);
+  auto const code = m_pedestrianRouter->CalculateRoute(Checkpoints(from,to),m2::PointD::Zero(),false,delegate,route);
+  if (code != RouterResultCode::NoError)
+    return {-static_cast<double>(code)};
+  auto const & points = route.GetPoly().GetPoints();
+  if (points.size() < 2 || points.size() > 20000)
+    return {};
+  std::vector<double> result{route.GetTotalTimeSec(), route.GetTotalDistanceMeters()};
+  result.reserve(2 + points.size() * 2);
+  for (auto const & point : points)
+  {
+    auto const ll = mercator::ToLatLon(point);
+    result.push_back(ll.m_lat);
+    result.push_back(ll.m_lon);
+  }
+  return result;
 }
 
 void RoutingManager::SetRouterImpl(RouterType type)
@@ -1215,11 +1260,18 @@ void RoutingManager::ReorderIntermediatePoints()
 
   RouteMarkPoint * addedPoint = nullptr;
   m2::PointD addedPosition;
+  // The start and finish shown on the map: a route planned outside the routing session (public transport)
+  // leaves the session's own checkpoints empty or from an older route.
+  std::optional<m2::PointD> start, finish;
 
   for (auto const & p : routePoints.GetRoutePoints())
   {
     CHECK(p, ());
-    if (p->GetRoutePointType() == RouteMarkType::Intermediate)
+    if (p->GetRoutePointType() == RouteMarkType::Start)
+      start = p->GetPivot();
+    else if (p->GetRoutePointType() == RouteMarkType::Finish)
+      finish = p->GetPivot();
+    else if (p->GetRoutePointType() == RouteMarkType::Intermediate)
     {
       // Note. An added (new) intermediate point is the first intermediate point at |routePoints.GetRoutePoints()|.
       // The other intermediate points are former ones.
@@ -1238,9 +1290,9 @@ void RoutingManager::ReorderIntermediatePoints()
   if (addedPoint == nullptr)
     return;
 
-  CheckpointPredictor predictor(m_routingSession.GetStartPoint(), m_routingSession.GetEndPoint());
-
-  size_t const insertIndex = predictor.PredictPosition(prevPositions, addedPosition);
+  size_t insertIndex = prevPoints.size();
+  if (start && finish)
+    insertIndex = CheckpointPredictor(*start, *finish).PredictPosition(prevPositions, addedPosition);
   addedPoint->SetIntermediateIndex(insertIndex);
   for (size_t i = 0; i < prevPoints.size(); ++i)
     prevPoints[i]->SetIntermediateIndex(i < insertIndex ? i : i + 1);

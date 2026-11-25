@@ -75,6 +75,7 @@ public:
     /** `ColoredMarkPoint` */
     COLORED,
     TRAFFIC_LIGHT,
+    LIVE_VEHICLE,
     USER_MARK_TYPES_COUNT,
     USER_MARK_TYPES_COUNT_MAX = 1000,
   };

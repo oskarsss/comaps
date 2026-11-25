@@ -69,6 +69,17 @@ public class Factory
   {
     private static final int SEARCH_IN_VIEWPORT_ZOOM = 16;
 
+    /**
+     * A place opened from another app (a calendar address, a geo: link) replaces a route that is only being
+     * planned; otherwise its place page is drawn over the old plan. Navigation and a started transit trip stay.
+     */
+    static void leaveRoutePlanning()
+    {
+      final RoutingController routing = RoutingController.get();
+      if (routing.isPlanning() && !routing.isNavigating() && !app.organicmaps.transit.RigaTripService.isRunning())
+        routing.cancel();
+    }
+
     @Override
     public boolean process(@NonNull Intent intent, @NonNull MwmActivity target)
     {
@@ -82,6 +93,7 @@ public class Factory
 
       case RequestType.MAP:
         SearchEngine.INSTANCE.cancelInteractiveSearch();
+        leaveRoutePlanning();
         Map.executeMapApiRequest();
         return true;
 
@@ -91,6 +103,10 @@ public class Factory
         RoutingController.get().setRouterType(data.mRouterType);
         final RoutePoint from = data.mPoints[0];
         final RoutePoint to = data.mPoints[1];
+        // Transit links may say when: &depart=2026-11-24T08:30 or &arrive=08:30 (local time).
+        if (!app.organicmaps.transit.RigaTimeChoice.fromLink(uri.getQueryParameter("depart"),
+                uri.getQueryParameter("arrive"), to.mLat, to.mLon, System.currentTimeMillis()))
+          android.widget.Toast.makeText(target, app.organicmaps.R.string.riga_time_link_invalid, android.widget.Toast.LENGTH_LONG).show();
         RoutingController.get().prepare(
             MapObject.createMapObject(FeatureId.EMPTY, MapObject.API_POINT, from.mName, "", from.mLat, from.mLon),
             MapObject.createMapObject(FeatureId.EMPTY, MapObject.API_POINT, to.mName, "", to.mLat, to.mLon));
@@ -98,6 +114,7 @@ public class Factory
       case RequestType.SEARCH:
       {
         SearchEngine.INSTANCE.cancelInteractiveSearch();
+        leaveRoutePlanning();
         final ParsedSearchRequest request = Framework.nativeGetParsedSearchRequest();
         final double[] latlon = Framework.nativeGetParsedCenterLatLon();
         if (latlon != null)
@@ -115,6 +132,7 @@ public class Factory
       case RequestType.CROSSHAIR:
       {
         SearchEngine.INSTANCE.cancelInteractiveSearch();
+        leaveRoutePlanning();
         target.showPositionChooserForAPI(Framework.nativeGetParsedAppName());
 
         final double[] latlon = Framework.nativeGetParsedCenterLatLon();

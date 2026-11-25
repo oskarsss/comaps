@@ -89,6 +89,19 @@ void DrapeApiBuilder::BuildLines(ref_ptr<dp::GraphicsContext> context, DrapeApi:
         lvp.m_color = data.m_color;
         lvp.m_width = data.m_width;
         lvp.m_join = dp::RoundJoin;
+        if (data.m_casingWidth > data.m_width)
+        {
+          auto casing = lvp;
+          casing.m_color = data.m_casingColor;
+          casing.m_width = data.m_casingWidth;
+          LineShape(spline, casing).Draw(context, make_ref(&batcher), textures);
+        }
+        if (!data.m_pattern.empty())
+        {
+          lvp.m_pattern = data.m_pattern;
+          lvp.m_baseGtoPScale = data.m_baseGtoP;
+          lvp.m_cap = dp::ButtCap;
+        }
         LineShape(spline, lvp).Draw(context, make_ref(&batcher), textures);
       }
 

@@ -2841,7 +2841,8 @@ UserMark const * BookmarkManager::FindNearestUserMark(TTouchRectHolder const & h
   if (finder.GetFoundMark() != nullptr)
     return finder.GetFoundMark();
 
-  // Look for the closest TRACK_INFO or TRACK_SELECTION mark.
+  // Vehicle and track information marks have lower priority than bookmarks.
+  finder(UserMark::Type::LIVE_VEHICLE);
   finder(UserMark::Type::TRACK_INFO);
   finder(UserMark::Type::TRACK_SELECTION);
 

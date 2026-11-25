@@ -46,6 +46,10 @@ public class DotDividerItemDecoration extends RecyclerView.ItemDecoration
          i += parentLayoutRTL ? -1 : 1)
     {
       View child = parent.getChildAt(i);
+      // Only between neighbours on the same row: a divider at the end of a wrapped row points at nothing.
+      View next = parent.getChildAt(parentLayoutRTL ? i - 1 : i + 1);
+      if (next.getTop() >= child.getBottom() || next.getBottom() <= child.getTop())
+        continue;
 
       int centerX = mHorizontalMargin / 2 + child.getRight();
       int centerY = child.getHeight() / 2 + child.getTop();

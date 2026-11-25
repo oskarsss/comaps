@@ -46,6 +46,8 @@ public class RoutingPlanFragment extends BaseMwmFragment
   @Override
   public boolean onBackPressed()
   {
+    if (mPlanController.collapseTransitSheet())
+      return true;
     if (RoutingController.get().isPreviewingTurn())
     {
       ((MwmActivity) requireActivity()).exitRoutePreview();

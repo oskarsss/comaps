@@ -1,3 +1,5 @@
+#include "indexer/map_style.hpp"
+#include "indexer/map_style_reader.hpp"
 #include "app/organicmaps/sdk/Framework.hpp"
 
 #include "app/organicmaps/sdk/UserMarkHelper.hpp"
@@ -20,6 +22,10 @@
 #include "map/chart_generator.hpp"
 #include "map/everywhere_search_params.hpp"
 #include "map/user_mark.hpp"
+#include "map/live_vehicle_mark.hpp"
+
+#include <algorithm>
+#include <cmath>
 
 #include "storage/country_info_getter.hpp"
 #include "storage/storage_defines.hpp"
@@ -949,6 +955,310 @@ JNIEXPORT jstring JNICALL Java_app_organicmaps_sdk_Framework_nativeGetAddress(JN
 JNIEXPORT void JNICALL Java_app_organicmaps_sdk_Framework_nativeClearApiPoints(JNIEnv * env, jclass clazz)
 {
   frm()->GetBookmarkManager().GetEditSession().ClearGroup(UserMark::Type::API);
+}
+
+JNIEXPORT void JNICALL Java_app_organicmaps_sdk_Framework_nativeSetLiveVehicles(JNIEnv * env, jclass,
+                                                                               jdoubleArray coordinates,
+                                                                               jobjectArray labels)
+{
+  if (coordinates == nullptr || labels == nullptr)
+    return;
+  auto const count = env->GetArrayLength(labels);
+  if (count > 2000 || env->GetArrayLength(coordinates) != count * 2)
+    return;
+  std::vector<jdouble> points(count * 2);
+  if (count > 0)
+    env->GetDoubleArrayRegion(coordinates, 0, count * 2, points.data());
+  auto session = frm()->GetBookmarkManager().GetEditSession();
+  session.ClearGroup(UserMark::LIVE_VEHICLE);
+  for (jsize i = 0; i < count; ++i)
+  {
+    auto const lat = points[i * 2];
+    auto const lon = points[i * 2 + 1];
+    if (!std::isfinite(lat) || !std::isfinite(lon) || lat < 55 || lat > 58.6 || lon < 20 || lon > 28.8)
+      continue;
+    jni::TScopedLocalRef label(env, env->GetObjectArrayElement(labels, i));
+    auto * mark = session.CreateUserMark<LiveVehicleMark>(mercator::FromLatLon(lat, lon));
+    mark->SetTitle(jni::ToNativeString(env, static_cast<jstring>(label.get())));
+  }
+}
+
+JNIEXPORT void JNICALL Java_app_organicmaps_sdk_Framework_nativeResetPedestrianConnections(JNIEnv *, jclass)
+{
+  frm()->GetRoutingManager().ResetPedestrianConnections();
+}
+
+// Called on the provider's serial worker, never on the UI thread.
+JNIEXPORT jdoubleArray JNICALL Java_app_organicmaps_sdk_Framework_nativePedestrianConnection(
+    JNIEnv * env, jclass, jdouble fromLat, jdouble fromLon, jdouble toLat, jdouble toLon)
+{
+  // Latvia with a margin (TransitArea.plausible): walks to and from stops in every Latvian city.
+  if (!std::isfinite(fromLat) || !std::isfinite(fromLon) || !std::isfinite(toLat) || !std::isfinite(toLon)
+      || fromLat < 55 || fromLat > 58.6 || toLat < 55 || toLat > 58.6
+      || fromLon < 20 || fromLon > 28.8 || toLon < 20 || toLon > 28.8)
+    return env->NewDoubleArray(0);
+  auto const result = frm()->GetRoutingManager().CalculatePedestrianConnection(
+      mercator::FromLatLon(fromLat, fromLon), mercator::FromLatLon(toLat, toLon));
+  auto array = env->NewDoubleArray(result.size());
+  if (!result.empty())
+    env->SetDoubleArrayRegion(array, 0, result.size(), result.data());
+  return array;
+}
+
+JNIEXPORT void JNICALL Java_app_organicmaps_sdk_Framework_nativeCancelRouteBuild(JNIEnv *, jclass)
+{
+  frm()->GetRoutingManager().CloseRouting(false /* preserve route points */);
+}
+
+constexpr int kRigaJourneyMaxLegs = 64;
+
+struct RigaJourneyLines
+{
+  std::vector<std::vector<m2::PointD>> geometry;
+  std::vector<jboolean> walk;
+  std::vector<jint> fills;
+  /// Pixels per map unit the walks' dashes were laid out for; 0 while no journey is drawn.
+  double dashScale = 0;
+  bool listening = false;
+};
+RigaJourneyLines g_rigaJourney;
+
+void RemoveRigaJourney()
+{
+  auto & api = frm()->GetDrapeApi();
+  for (int i = 0; i < kRigaJourneyMaxLegs; ++i)
+  {
+    api.RemoveLine("riga-journey-halo:" + std::to_string(i));
+    api.RemoveLine("riga-journey-leg:" + std::to_string(i));
+    for (int end = 0; end < 2; ++end)
+    {
+      api.RemoveLine("riga-journey-stop:" + std::to_string(i) + ":" + std::to_string(end));
+      api.RemoveLine("riga-journey-stop-centre:" + std::to_string(i) + ":" + std::to_string(end));
+    }
+  }
+}
+
+/// Adds the stored journey's lines, the walks' dashes laid out for dashScale pixels per map unit.
+void RenderRigaJourney(double dashScale)
+{
+  g_rigaJourney.dashScale = dashScale;
+  // The journey is drawn like a printed transit map laid over the city, in layers (DrapeApi draws lines in the
+  // order they are added): first a halo under every ride that cuts it out of the busy base map (beige land and
+  // yellow/orange roads by day, which bus yellow and tram red would otherwise melt into), then the walks, then
+  // each ride as its line colour inside a keyline, then the boarding and alighting stops on top.
+  //   Day:   white halo | keyline in a dark shade of the line colour | line colour.
+  //   Night: near-black halo | keyline in a light tint of the line colour | line colour.
+  // The halo is what roads never have, so a ride reads as "the route" whatever its colour; the keyline keeps
+  // light colours (yellow buses) crisp on the white halo. Widths are in dp, as DrapeApi lines are in raw pixels.
+  auto const & geometry = g_rigaJourney.geometry;
+  auto const & walk = g_rigaJourney.walk;
+  auto const & fills = g_rigaJourney.fills;
+  auto const count = static_cast<jsize>(geometry.size());
+  auto & api = frm()->GetDrapeApi();
+  bool const dark = MapStyleIsDark(GetStyleReader().GetCurrentStyle());
+  float const dp = static_cast<float>(df::VisualParams::Instance().GetVisualScale());
+  dp::Color const halo = dark ? dp::Color(16, 18, 22, 255) : dp::Color(255, 255, 255, 255);
+  auto const keyline = [dark](dp::Color const & fill)
+  {
+    // Day: 40% of the colour; night: 55% of the way to white.
+    if (!dark)
+      return dp::Color(fill.GetRed() * 40 / 100, fill.GetGreen() * 40 / 100, fill.GetBlue() * 40 / 100, 255);
+    return dp::Color(fill.GetRed() + (255 - fill.GetRed()) * 55 / 100, fill.GetGreen() + (255 - fill.GetGreen()) * 55 / 100,
+                     fill.GetBlue() + (255 - fill.GetBlue()) * 55 / 100, 255);
+  };
+  auto const colour = [&fills](jsize i)
+  {
+    uint32_t const argb = fills[i];
+    return dp::Color((argb >> 16) & 255, (argb >> 8) & 255, argb & 255, 255);
+  };
+  float constexpr kRide = 7, kKeyline = 10.5f, kHalo = 15;
+  dp::PenPatternT const dashes{dp::PatternFloat2Pixel(4.0 * dp), dp::PatternFloat2Pixel(4.0 * dp)};  // patterns.txt
+  // 1. Halos under every ride, so where rides cross or meet at a change no halo cuts another ride's colour.
+  for (jsize i = 0; i < count; ++i)
+    if (!walk[i])
+      api.AddLine("riga-journey-halo:" + std::to_string(i), df::DrapeApiLineData(geometry[i], halo).Width(kHalo * dp));
+  // 2. Walks: dark (by day) or light (at night) dashes on their own narrow halo, under the rides.
+  for (jsize i = 0; i < count; ++i)
+    if (walk[i])
+      api.AddLine("riga-journey-leg:" + std::to_string(i),
+                  df::DrapeApiLineData(geometry[i], dark ? dp::Color(220, 224, 230, 255) : dp::Color(60, 70, 85, 255))
+                      .Width(4 * dp).Casing(halo, 8 * dp).Dashes(dashes, dashScale));
+  // 3. Rides: the line colour inside its keyline.
+  for (jsize i = 0; i < count; ++i)
+  {
+    if (walk[i])
+      continue;
+    dp::Color const fill = colour(i);
+    api.AddLine("riga-journey-leg:" + std::to_string(i),
+                df::DrapeApiLineData(geometry[i], fill).Width(kRide * dp).Casing(keyline(fill), kKeyline * dp));
+  }
+  // 4. Boarding and alighting stops last, so no leg is drawn over them: a ring in the line colour with the same
+  // keyline and halo as the ride, around a white (day) or dark (night) centre. Each is a round-capped stub of a
+  // few metres, so it goes through the same line path as the journey.
+  for (jsize i = 0; i < count; ++i)
+  {
+    if (walk[i])
+      continue;
+    dp::Color const fill = colour(i);
+    auto const & line = geometry[i];
+    for (int end = 0; end < 2; ++end)
+    {
+      m2::PointD const at = end == 0 ? line.front() : line.back();
+      m2::PointD const toward = end == 0 ? line[1] : line[line.size() - 2];
+      m2::PointD const step = toward - at;
+      double const length = step.Length();
+      m2::PointD const stub = at + (length > 0 ? step * (2e-5 / length) : m2::PointD(2e-5, 0));
+      std::string const id = std::to_string(i) + ":" + std::to_string(end);
+      api.AddLine("riga-journey-stop:" + id,
+                  df::DrapeApiLineData({at, stub}, fill).Width(13 * dp).Casing(keyline(fill), 16 * dp));
+      api.AddLine("riga-journey-stop-centre:" + id,
+                  df::DrapeApiLineData({at, stub}, dark ? halo : dp::Color(255, 255, 255, 255)).Width(6.5f * dp));
+    }
+  }
+}
+
+/// Walk dashes are laid out in map units for one scale and stay right only near it: zoomed in a few times past it,
+/// each piece of the line runs off the end of the dash pattern and draws as a blank (or one long dash) stretch.
+/// Map features are rebuilt per zoom level for this; the journey is rebuilt here when the zoom has moved too far.
+void OnRigaJourneyViewport(ScreenBase const & screen)
+{
+  if (g_rigaJourney.dashScale <= 0 || g_rigaJourney.geometry.empty())
+    return;
+  bool hasWalk = false;
+  for (auto const w : g_rigaJourney.walk)
+    hasWalk = hasWalk || w;
+  if (!hasWalk)
+    return;
+  double const current = 1.0 / screen.GetScale();
+  if (!std::isfinite(current) || current <= 0)
+    return;
+  double const ratio = current / g_rigaJourney.dashScale;
+  if (ratio > 0.6 && ratio < 1.8)
+    return;
+  RemoveRigaJourney();
+  RenderRigaJourney(current);
+}
+
+void DrawRigaJourney(JNIEnv * env,
+                                                                              jobjectArray lines,
+                                                                              jbooleanArray walking, jintArray colors, jboolean fit)
+{
+  // A multi-stop journey joins several plans (each up to 16 legs) with stays between them.
+  RemoveRigaJourney();
+  g_rigaJourney.geometry.clear();
+  g_rigaJourney.dashScale = 0;
+  if (lines == nullptr || walking == nullptr)
+    return;
+  auto const all = env->GetArrayLength(lines);
+  if (env->GetArrayLength(walking) != all)
+    return;
+  // Longer journeys show their first legs rather than nothing.
+  auto const count = std::min<jsize>(all, kRigaJourneyMaxLegs);
+  std::vector<jint> fills(count, 0xff1868e0);
+  if (colors != nullptr && env->GetArrayLength(colors) == all && count > 0)
+    env->GetIntArrayRegion(colors,0,count,fills.data());
+  std::vector<jboolean> walk(count);
+  if (count > 0)
+    env->GetBooleanArrayRegion(walking, 0, count, walk.data());
+  std::vector<std::vector<m2::PointD>> geometry;
+  size_t total = 0;
+  for (jsize i = 0; i < count; ++i)
+  {
+    jni::TScopedLocalRef line(env, env->GetObjectArrayElement(lines, i));
+    if (line.get() == nullptr)
+      return;
+    auto const array = static_cast<jdoubleArray>(line.get());
+    auto const size = env->GetArrayLength(array);
+    total += size;
+    if (size < 4 || size % 2 != 0 || size > 40004 || total > 200000)
+      return;
+    std::vector<jdouble> coordinates(size);
+    env->GetDoubleArrayRegion(array, 0, size, coordinates.data());
+    std::vector<m2::PointD> points;
+    for (jsize p = 0; p < size; p += 2)
+    {
+      double const lat = coordinates[p];
+      double const lon = coordinates[p + 1];
+      // Latvia with a margin (the app's transit area): Liepāja to Daugavpils, and walks over the border.
+      if (!std::isfinite(lat) || !std::isfinite(lon) || lat < 55 || lat > 58.6 || lon < 20 || lon > 28.8)
+        return;
+      points.push_back(mercator::FromLatLon(lat, lon));
+    }
+    geometry.push_back(std::move(points));
+  }
+  g_rigaJourney.geometry = std::move(geometry);
+  g_rigaJourney.walk = std::move(walk);
+  g_rigaJourney.fills = std::move(fills);
+  if (!g_rigaJourney.listening)
+  {
+    g_rigaJourney.listening = true;
+    frm()->SetViewportListener(&OnRigaJourneyViewport);
+  }
+  m2::RectD bounds;
+  for (auto const & line : g_rigaJourney.geometry)
+    for (auto const & point : line)
+      bounds.Add(point);
+  bounds.Scale(1.25);
+  // Dashes are laid out in map units: size them for the scale the journey is framed at, whether or not this draw
+  // frames it. The current scale is no guide: a redraw can come while the camera is still moving (a refresh during
+  // the framing animation), and dashes sized for that passing zoom come out several times too long or too fine.
+  // Framing stops at kFitMaxScale, so a short journey (a walk of a few hundred metres) is sized for that zoom.
+  int constexpr kFitMaxScale = 16;
+  m2::RectD const view = frm()->GetCurrentViewport();
+  double const current = frm()->GtoP(view.RightTop()).Length(frm()->GtoP(view.LeftBottom())) / view.LeftBottom().Length(view.RightTop());
+  double const framed = bounds.IsEmptyInterior() || !std::isfinite(current) || current <= 0 ? current
+      : std::min(current * std::min(view.SizeX() / bounds.SizeX(), view.SizeY() / bounds.SizeY()),
+                 1.0 / df::GetScreenScale(kFitMaxScale));
+  double const dashScale = std::isfinite(framed) && framed > 0 ? framed : 1.0;
+  RenderRigaJourney(dashScale);
+  if (count > 0 && fit)
+  {
+    frm()->ShowRect(bounds, kFitMaxScale, true /* animation */, true /* useVisibleViewport */);
+  }
+  // An idle renderer (a cold start, or a redraw for a new map style) would otherwise keep the old frame on screen
+  // until the map is touched.
+  frm()->MakeFrameActive();
+}
+
+JNIEXPORT void JNICALL Java_app_organicmaps_sdk_Framework_nativeDrawRigaJourney(
+    JNIEnv * env, jclass, jobjectArray lines, jbooleanArray walking, jboolean fit)
+{
+  DrawRigaJourney(env,lines,walking,nullptr,fit);
+}
+JNIEXPORT void JNICALL Java_app_organicmaps_sdk_Framework_nativeDrawColoredRigaJourney(
+    JNIEnv * env, jclass, jobjectArray lines, jbooleanArray walking, jintArray colors, jboolean fit)
+{
+  DrawRigaJourney(env,lines,walking,colors,fit);
+}
+JNIEXPORT void JNICALL Java_app_organicmaps_sdk_Framework_nativeSetJourneyVehicles(
+    JNIEnv * env, jclass, jdoubleArray coordinates, jobjectArray numbers, jintArray colors, jobjectArray titles)
+{
+  auto session = frm()->GetBookmarkManager().GetEditSession();
+  session.ClearGroup(UserMark::LIVE_VEHICLE);
+  if (!coordinates || !numbers || !colors || !titles) return;
+  jsize const count = env->GetArrayLength(numbers);
+  if (count > 16 || env->GetArrayLength(coordinates) != count*2 || env->GetArrayLength(colors) != count
+      || env->GetArrayLength(titles) != count) return;
+  std::vector<jdouble> points(count*2);
+  std::vector<jint> fills(count);
+  if (count > 0)
+  {
+    env->GetDoubleArrayRegion(coordinates,0,count*2,points.data());
+    env->GetIntArrayRegion(colors,0,count,fills.data());
+  }
+  for (jsize i = 0; i < count; ++i)
+  {
+    double const lat = points[2*i], lon = points[2*i+1];
+    if (!std::isfinite(lat) || !std::isfinite(lon) || lat < 55 || lat > 58.6 || lon < 20 || lon > 28.8) continue;
+    jni::TScopedLocalRef number(env,env->GetObjectArrayElement(numbers,i));
+    jni::TScopedLocalRef title(env,env->GetObjectArrayElement(titles,i));
+    if (!number.get() || !title.get()) continue;
+    uint32_t const fill = fills[i];
+    auto * mark = session.CreateUserMark<LiveVehicleMark>(mercator::FromLatLon(lat,lon));
+    mark->SetTitle(jni::ToNativeString(env,static_cast<jstring>(title.get())));
+    mark->SetBadge(jni::ToNativeString(env,static_cast<jstring>(number.get())),
+        dp::Color((fill >> 16) & 255,(fill >> 8) & 255,fill & 255,(fill >> 24) & 255));
+  }
 }
 
 JNIEXPORT jint JNICALL Java_app_organicmaps_sdk_Framework_nativeParseAndSetApiUrl(JNIEnv * env, jclass clazz,

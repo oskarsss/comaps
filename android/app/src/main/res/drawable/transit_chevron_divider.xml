@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Between the plan's chips: "then", as in the route cards. Smaller and lighter than the chips so the line colours lead.
+     Tinted in code to the secondary text colour. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="6dp"
+    android:height="10dp"
+    android:autoMirrored="true"
+    android:viewportWidth="6"
+    android:viewportHeight="10">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="1.4"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M1.2,1.2L4.8,5L1.2,8.8"/>
+</vector>

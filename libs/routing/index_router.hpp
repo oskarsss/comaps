@@ -91,6 +91,8 @@ public:
   ~IndexRouter() override;
 
   std::unique_ptr<WorldGraph> MakeSingleMwmWorldGraph();
+  // Only for an isolated, short-lived pedestrian batch; normal routers never enable this.
+  void ReusePedestrianGraph() { m_reusePedestrianGraph = m_vehicleType == VehicleType::Pedestrian; }
 
   // IRouter overrides:
   std::string GetName() const override { return m_name; }
@@ -307,5 +309,7 @@ private:
   CountryParentNameGetterFn m_countryParentNameGetterFn;
 
   TimeGetterT m_currentTimeGetter;
+  bool m_reusePedestrianGraph = false;
+  std::unique_ptr<WorldGraph> m_pedestrianGraph;
 };
 }  // namespace routing

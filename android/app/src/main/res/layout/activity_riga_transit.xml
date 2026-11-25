@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/riga_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+  <com.google.android.material.appbar.MaterialToolbar
+      android:id="@+id/riga_toolbar"
+      android:layout_width="match_parent"
+      android:layout_height="?attr/actionBarSize" />
+  <TextView
+      android:id="@+id/riga_status"
+      android:minHeight="144dp"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:padding="16dp"
+      android:accessibilityLiveRegion="polite" />
+  <Button
+      android:id="@+id/riga_download"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:text="@string/riga_download" />
+  <com.google.android.material.materialswitch.MaterialSwitch
+      android:id="@+id/riga_live"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:paddingHorizontal="16dp"
+      android:text="@string/riga_live" />
+  <Button
+      android:id="@+id/riga_journeys"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:text="@string/riga_plan" />
+  <Button
+      android:id="@+id/riga_map"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:visibility="gone"
+      android:text="@string/riga_show_map" />
+  <EditText
+      android:id="@+id/riga_search"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:minHeight="48dp"
+      android:paddingHorizontal="16dp"
+      android:inputType="text"
+      android:singleLine="true"
+      android:hint="@string/riga_search_stops" />
+  <ListView
+      android:id="@+id/riga_list"
+      android:layout_width="match_parent"
+      android:layout_height="0dp"
+      android:layout_weight="1" />
+</LinearLayout>

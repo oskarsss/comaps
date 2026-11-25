@@ -299,7 +299,8 @@ void IndexRouter::ClearState()
 {
   m_roadGraph.ClearState();
   m_directionsEngine->Clear();
-  m_dataSource.FreeHandles();
+  if (!m_reusePedestrianGraph)
+    m_dataSource.FreeHandles();
 }
 
 bool IndexRouter::FindClosestProjectionToRoad(m2::PointD const & point, m2::PointD const & direction, double radius,
@@ -520,7 +521,10 @@ RouterResultCode IndexRouter::DoCalculateRoute(Checkpoints const & checkpoints, 
   m_lastRoute.reset();
 
   TrafficStash::Guard guard(m_trafficStash);
-  unique_ptr<WorldGraph> graph = MakeWorldGraph();
+  unique_ptr<WorldGraph> graph = m_pedestrianGraph ? std::move(m_pedestrianGraph) : MakeWorldGraph();
+  SCOPE_GUARD(savePedestrianGraph, ([this, &graph] {
+    if (m_reusePedestrianGraph) m_pedestrianGraph = std::move(graph);
+  }));
 
   vector<Segment> segments;
 

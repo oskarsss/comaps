@@ -65,7 +65,7 @@
               android:layout_width="@dimen/routing_toolbar_button"
               android:layout_height="@dimen/routing_toolbar_button"
               android:layout_marginEnd="@dimen/margin_half_plus"
-              android:contentDescription="@string/subway"
+              android:contentDescription="@string/riga_public_transport"
               tools:button="@drawable/ic_route_planning_metro_40px"
               tools:buttonTint="?iconTintLight" />
 
@@ -146,6 +146,15 @@
 
     </com.google.android.material.appbar.MaterialToolbar>
   </FrameLayout>
+  <!-- When the trip would end with each mode, a label under each mode button (RouteModeTimes). -->
+  <FrameLayout
+    android:id="@+id/route_mode_times"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?colorPrimary"
+    android:paddingBottom="6dp"
+    android:visibility="gone"
+    tools:visibility="visible" />
   <FrameLayout
     android:id="@+id/routing_options_banner"
     android:layout_width="match_parent"

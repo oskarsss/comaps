@@ -30,17 +30,6 @@
         android:textSize="20sp"
         android:textStyle="bold"/>
 
-      <com.google.android.material.imageview.ShapeableImageView
-        android:id="@+id/image_my_location"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerVertical="true"
-        android:padding="12dp"
-        android:layout_alignParentEnd="true"
-        android:visibility="invisible"
-        tools:visibility="visible"
-        app:srcCompat="@drawable/ic_location_crosshair"
-        app:tint="?colorAccent"/>
     </RelativeLayout>
   </FrameLayout>
 
@@ -70,6 +59,16 @@
       tools:listitem="@layout/manage_route_list_item"/>
 
   </androidx.constraintlayout.widget.ConstraintLayout>
+
+  <!-- A new stop is picked with the search, as from the route panel. -->
+  <com.google.android.material.button.MaterialButton
+    android:id="@+id/btn__add_stop"
+    style="@style/Widget.Material3.Button.TextButton.Icon"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="@dimen/altitude_chart_container_padding_left"
+    android:text="@string/riga_add_stop"
+    app:icon="@drawable/ic_plus"/>
 
   <androidx.constraintlayout.widget.ConstraintLayout
     android:layout_width="match_parent"

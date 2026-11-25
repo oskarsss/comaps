@@ -89,18 +89,15 @@
     android:layout_height="wrap_content"
     android:orientation="horizontal">
 
+    <!-- Manage Route: a compact pencil like the transit panel's, beside the other route actions. -->
     <com.google.android.material.button.MaterialButton
       android:id="@+id/btn__manage_route"
-      style="@style/Widget.Material3.Button.TextButton"
-      android:layout_width="wrap_content"
+      style="@style/Widget.Material3.Button.IconButton"
+      android:layout_width="@dimen/nav_icon_size"
       android:layout_height="@dimen/nav_icon_size"
-      android:paddingHorizontal="0dp"
-      android:text="@string/planning_route_manage_route"
-      android:textAppearance="@style/MwmTextAppearance.Body1"
-      android:contentDescription="@string/save"
-      android:ellipsize="end"
-      android:maxLines="2"
-      android:textColor="?android:textColorPrimary"
+      android:layout_marginStart="-8dp"
+      android:contentDescription="@string/planning_route_manage_route"
+      android:tooltipText="@string/planning_route_manage_route"
       app:icon="@drawable/ic_edit"
       app:iconTint="?android:textColorPrimary" />
 

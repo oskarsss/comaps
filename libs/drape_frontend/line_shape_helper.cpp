@@ -5,6 +5,9 @@
 #include "base/assert.hpp"
 #include "base/math.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 namespace df
 {
 namespace
@@ -131,7 +134,10 @@ std::vector<glsl::vec2> GenerateJoinNormals(dp::LineJoin joinType, glsl::vec2 co
 {
   std::vector<glsl::vec2> normals;
   float const eps = 1e-5;
-  if (fabs(glsl::dot(normal1, normal2) - 1.0f) < eps)
+  float const dot = glsl::dot(normal1, normal2);
+  // A degenerate segment (e.g. two equal points) has no direction: no join, rather than a NaN angle below
+  // turning into a huge vertex count.
+  if (!std::isfinite(dot) || fabs(dot - 1.0f) < eps)
     return normals;
 
   if (joinType == dp::LineJoin::BevelJoin)
@@ -171,7 +177,8 @@ std::vector<glsl::vec2> GenerateJoinNormals(dp::LineJoin joinType, glsl::vec2 co
   else
   {
     double const segmentAngle = math::pi / 8.0;
-    double const fullAngle = acos(glsl::dot(normal1, normal2));
+    // Rounding can put the dot product of unit normals just outside [-1, 1].
+    double const fullAngle = acos(std::clamp(static_cast<double>(dot), -1.0, 1.0));
     int segmentsCount = static_cast<int>(fullAngle / segmentAngle);
     if (segmentsCount == 0)
       segmentsCount = 1;

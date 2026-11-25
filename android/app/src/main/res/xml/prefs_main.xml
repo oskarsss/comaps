@@ -11,6 +11,13 @@
     tools:summary="LongLongUsernameHere" />
 
   <PreferenceScreen
+    android:key="pref_screen_live_feeds"
+    android:title="@string/live_feeds"
+    app:fragment="app.organicmaps.settings.LiveFeedsSettingsFragment"
+    app:icon="@drawable/ic_route_planning_bus"
+    android:summary="@string/live_feeds_summary" />
+
+  <PreferenceScreen
       android:key="pref_screen_nav"
       android:title="@string/prefs_group_route"
       app:fragment="app.organicmaps.settings.NavigationSettingsFragment"

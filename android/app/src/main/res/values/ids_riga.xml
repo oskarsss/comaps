@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- A line badge view's own minimum size, kept while it shows a stop's numbered circle. -->
+  <item name="transit_badge_min" type="id"/>
+</resources>

@@ -90,6 +90,7 @@ android {
     }
 
     compileSdk = providers.gradleProperty("propCompileSdkVersion").get().toInt()
+    testOptions { unitTests.isIncludeAndroidResources = true }
 
     defaultConfig {
         versionCode = rootProject.ext.get("versionCode") as Int
@@ -402,6 +403,7 @@ dependencies {
     // Test Dependencies
     androidTestImplementation(libs.androidx.test.junit)
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
     testImplementation(libs.mockito.core)
 }
 

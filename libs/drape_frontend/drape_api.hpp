@@ -3,6 +3,7 @@
 #include "drape_frontend/drape_engine_safe_ptr.hpp"
 
 #include "drape/color.hpp"
+#include "drape/stipple_pen_resource.hpp"
 #include "drape/pointers.hpp"
 
 #include "geometry/point2d.hpp"
@@ -51,6 +52,21 @@ struct DrapeApiLineData
     return *this;
   }
 
+  DrapeApiLineData & Casing(dp::Color color, float width)
+  {
+    m_casingColor = color;
+    m_casingWidth = width;
+    return *this;
+  }
+
+  /// Dashes from a pattern listed in data/patterns.txt (already in pixels), sized for the scale baseGtoP.
+  DrapeApiLineData & Dashes(dp::PenPatternT const & pattern, double baseGtoP)
+  {
+    m_pattern = pattern;
+    m_baseGtoP = baseGtoP;
+    return *this;
+  }
+
   DrapeApiLineData & ShowId()
   {
     m_showId = true;
@@ -60,6 +76,10 @@ struct DrapeApiLineData
   std::vector<m2::PointD> m_points;
   float m_width = 1.0f;
   dp::Color m_color;
+  dp::Color m_casingColor;
+  float m_casingWidth = 0.0f;
+  dp::PenPatternT m_pattern;
+  double m_baseGtoP = 1.0;
 
   bool m_showPoints = false;
   bool m_markPoints = false;

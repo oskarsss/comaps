@@ -10,11 +10,14 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.recyclerview.widget.RecyclerView;
+import app.organicmaps.MwmApplication;
 import app.organicmaps.R;
-import app.organicmaps.sdk.bookmarks.data.MapObject;
+import app.organicmaps.sdk.Framework;
 import app.organicmaps.sdk.routing.RouteMarkData;
 import app.organicmaps.sdk.routing.RouteMarkType;
+import app.organicmaps.sdk.routing.RoutingController;
 import app.organicmaps.sdk.util.StringUtils;
+import app.organicmaps.transit.RigaStays;
 import app.organicmaps.util.UiUtils;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.textview.MaterialTextView;
@@ -31,8 +34,9 @@ public class ManageRouteAdapter extends RecyclerView.Adapter<ManageRouteAdapter.
   public interface ManageRouteListener
   {
     void startDrag(RecyclerView.ViewHolder viewHolder);
-    void showMyLocationIcon(boolean showMyLocationIcon);
     void onRoutePointDeleted(RecyclerView.ViewHolder viewHolder);
+    /** The rider chose another stay at a stop of a public transport route. */
+    default void onStayChanged() {}
   }
 
   public ManageRouteAdapter(Context context, RouteMarkData[] routeMarkData, ManageRouteListener listener)
@@ -40,8 +44,6 @@ public class ManageRouteAdapter extends RecyclerView.Adapter<ManageRouteAdapter.
     mContext = context;
     mRoutePoints = new ArrayList<>(Arrays.asList(routeMarkData));
     mManageRouteListener = listener;
-
-    updateMyLocationIcon();
   }
 
   @NonNull
@@ -100,7 +102,7 @@ public class ManageRouteAdapter extends RecyclerView.Adapter<ManageRouteAdapter.
     }
     else
     {
-      title = mRoutePoints.get(position).mTitle;
+      title = readableTitle(mRoutePoints.get(position));
       subtitle = mRoutePoints.get(position).mSubtitle;
     }
 
@@ -121,6 +123,64 @@ public class ManageRouteAdapter extends RecyclerView.Adapter<ManageRouteAdapter.
     });
 
     holder.mImageViewDelete.setOnClickListener(v -> mManageRouteListener.onRoutePointDeleted(holder));
+
+    bindStay(holder, mRoutePoints.get(position), title);
+  }
+
+  /** A stop of a public transport route shows how long the rider stays there; a tap changes it. */
+  private void bindStay(@NonNull ManageRouteViewHolder holder, @NonNull RouteMarkData point, String name)
+  {
+    boolean shown = point.mPointType == RouteMarkType.Intermediate && RoutingController.get().isTransitType();
+    UiUtils.showIf(shown, holder.mStay);
+    if (!shown)
+      return;
+    String stay = StayPicker.duration(mContext, RigaStays.get(mContext, point.mLat, point.mLon));
+    holder.mStay.setText(mContext.getString(R.string.riga_stay_row, stay));
+    holder.mStay.setContentDescription(mContext.getString(R.string.riga_stay_change_description, name, stay));
+    holder.mStay.setOnClickListener(v -> StayPicker.pick(mContext, name, point.mLat, point.mLon, null, () -> {
+      int at = holder.getBindingAdapterPosition();
+      if (at != RecyclerView.NO_POSITION)
+        notifyItemChanged(at);
+      if (mManageRouteListener != null)
+        mManageRouteListener.onStayChanged();
+    }));
+  }
+
+  /**
+   * The point's name for its row. A point known only by its coordinates (such as the rider's position kept from a
+   * previous run, which comes back as a plain point) is named after the rider's position when it is there, or after
+   * the address at it.
+   */
+  @NonNull
+  private String readableTitle(@NonNull RouteMarkData point)
+  {
+    String title = point.mTitle == null ? "" : point.mTitle;
+    if (!title.isEmpty() && !isCoordinates(title))
+      return title;
+    android.location.Location here = MwmApplication.from(mContext).getLocationHelper().getSavedLocation();
+    if (here != null && isNear(here.getLatitude(), here.getLongitude(), point.mLat, point.mLon))
+      return mContext.getString(app.organicmaps.sdk.R.string.core_my_position);
+    String address = Framework.nativeGetAddress(point.mLat, point.mLon);
+    if (address != null && !address.isEmpty())
+      return address;
+    return title.isEmpty() ? StringUtils.formatUsingUsLocale("%.6f, %.6f", point.mLat, point.mLon) : title;
+  }
+
+  private static final java.util.regex.Pattern COORDINATES =
+      java.util.regex.Pattern.compile("\\s*-?\\d{1,3}\\.\\d+,\\s*-?\\d{1,3}\\.\\d+\\s*");
+
+  /** Whether {@code title} is a bare "56.932043, 24.207299". */
+  static boolean isCoordinates(@NonNull String title)
+  {
+    return COORDINATES.matcher(title).matches();
+  }
+
+  /** Within 50 m: a position kept from earlier is still where the rider is. */
+  static boolean isNear(double lat1, double lon1, double lat2, double lon2)
+  {
+    double dLat = Math.toRadians(lat2 - lat1);
+    double dLon = Math.toRadians(lon2 - lon1) * Math.cos(Math.toRadians((lat1 + lat2) / 2));
+    return 6371000 * Math.hypot(dLat, dLon) < 50;
   }
 
   @Override
@@ -155,38 +215,6 @@ public class ManageRouteAdapter extends RecyclerView.Adapter<ManageRouteAdapter.
     updateRoutePointsData();
 
     notifyItemRemoved(viewHolder.getAbsoluteAdapterPosition());
-  }
-
-  public void setMyLocationAsStartingPoint(MapObject myLocation)
-  {
-    String latLonString = StringUtils.formatUsingUsLocale("%.6f, %.6f", myLocation.getLat(), myLocation.getLon());
-
-    // Replace route point in first position with "My Position".
-    mRoutePoints.set(0, new RouteMarkData(latLonString, "", RouteMarkType.Start, 0, true, true, false,
-                                          myLocation.getLat(), myLocation.getLon()));
-
-    updateRoutePointsData();
-    notifyItemChanged(0);
-
-    if (mManageRouteListener != null)
-      mManageRouteListener.showMyLocationIcon(true);
-  }
-
-  private void updateMyLocationIcon()
-  {
-    boolean containsMyLocationPoint = false;
-
-    for (RouteMarkData routePoint : mRoutePoints)
-    {
-      if (routePoint.mIsMyPosition)
-      {
-        containsMyLocationPoint = true;
-        break;
-      }
-    }
-
-    if (mManageRouteListener != null)
-      mManageRouteListener.showMyLocationIcon(!containsMyLocationPoint);
   }
 
   private void updateRoutePointsData()
@@ -234,6 +262,9 @@ public class ManageRouteAdapter extends RecyclerView.Adapter<ManageRouteAdapter.
     @NonNull
     public final ShapeableImageView mImageViewDelete;
 
+    @NonNull
+    public final com.google.android.material.button.MaterialButton mStay;
+
     ManageRouteViewHolder(@NonNull View itemView)
     {
       super(itemView);
@@ -244,6 +275,7 @@ public class ManageRouteAdapter extends RecyclerView.Adapter<ManageRouteAdapter.
       mImageViewSwap = itemView.findViewById(R.id.reorder_icon);
       mViewDivider = itemView.findViewById(R.id.divider);
       mImageViewDelete = itemView.findViewById(R.id.delete_icon);
+      mStay = itemView.findViewById(R.id.stay);
     }
   }
 }

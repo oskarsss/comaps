@@ -30,6 +30,7 @@ import app.organicmaps.sdk.bookmarks.data.FeatureId;
 import app.organicmaps.sdk.bookmarks.data.MapObject;
 import app.organicmaps.sdk.downloader.MapManager;
 import app.organicmaps.sdk.location.LocationListener;
+import app.organicmaps.sdk.routing.RouteMarkType;
 import app.organicmaps.sdk.routing.RoutingController;
 import app.organicmaps.sdk.search.SearchEngine;
 import app.organicmaps.sdk.search.SearchListener;
@@ -277,6 +278,9 @@ public class SearchFragment extends BaseMwmFragment implements SearchListener, C
     ViewPager2 pager = mTabFrame.findViewById(R.id.pages);
 
     mToolbarController = new ToolbarController(view);
+    // Opened from "Add stop": the result becomes a stop of the route, not a place to look at.
+    if (RoutingController.get().getWaitingPoiPickType() == RouteMarkType.Intermediate)
+      mToolbarController.setHint(R.string.riga_search_add_stop);
     TabLayout tabLayout = root.findViewById(R.id.tabs);
 
     if (Config.isSearchHistoryEnabled())

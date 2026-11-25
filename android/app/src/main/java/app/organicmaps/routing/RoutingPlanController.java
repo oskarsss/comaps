@@ -92,6 +92,8 @@ public class RoutingPlanController extends ToolbarController
     mRoutingPlanListener = routingPlanListener;
 
     mRouterTypes = getToolbar().findViewById(R.id.route_type);
+    android.widget.FrameLayout modeTimes = root.findViewById(R.id.route_mode_times);
+    mModeTimes = modeTimes == null ? null : new RouteModeTimes(modeTimes, getToolbar());
 
     setupRouterButtons();
 
@@ -106,8 +108,13 @@ public class RoutingPlanController extends ToolbarController
     mRoutingBottomMenuController = RoutingBottomMenuController.newInstance(requireActivity(), mFrame, listener);
 
     mRoutingOptionsBanner = mFrame.findViewById(R.id.routing_options_banner);
+    mFrame.getViewTreeObserver().addOnGlobalLayoutListener(mLayoutWatcher);
     View btn = mFrame.findViewById(R.id.routing_options_btn);
-    btn.setOnClickListener(v -> RoutingOptionsActivity.start(requireActivity(), startRoutingOptionsForResult));
+    btn.setOnClickListener(v -> {
+      if (RoutingController.get().isRigaTransit())
+        requireActivity().startActivity(new android.content.Intent(requireActivity(), app.organicmaps.settings.LiveFeedsSettingsActivity.class));
+      else RoutingOptionsActivity.start(requireActivity(), startRoutingOptionsForResult);
+    });
 
     mRoutingOptionsLayoutListener = new SelfTerminatedRoutingOptionsLayoutListener();
     mAnimToggle =
@@ -141,7 +148,7 @@ public class RoutingPlanController extends ToolbarController
     setupRouterButton(R.id.vehicle, R.drawable.ic_car, this::onVehicleModeSelected);
     setupRouterButton(R.id.pedestrian, R.drawable.ic_pedestrian, this::onPedestrianModeSelected);
     //    setupRouterButton(R.id.taxi, R.drawable.ic_taxi, this::onTaxiModeSelected);
-    setupRouterButton(R.id.transit, app.organicmaps.sdk.R.drawable.ic_route_planning_metro_40px,
+    setupRouterButton(R.id.transit, app.organicmaps.sdk.R.drawable.ic_route_planning_bus,
                       this::onTransitModeSelected);
     setupRouterButton(R.id.bicycle, R.drawable.ic_bike, this::onBicycleModeSelected);
     setupRouterButton(R.id.ruler, app.organicmaps.sdk.R.drawable.ic_ruler_route, this::onRulerModeSelected);
@@ -191,14 +198,144 @@ public class RoutingPlanController extends ToolbarController
     return (mFrameHeight > 0);
   }
 
+  private int mFittedTransitRevision = -1;
+  /** The journey revision a fit has been scheduled for, so each one is scheduled once. */
+  private int mFittingTransitRevision = -1;
+  private static boolean sVisibleRectNarrowed;
+
+  /** Restores the full map viewport after the route plan that narrowed it closes. */
+  public static void restoreVisibleMap(@NonNull View root)
+  {
+    if (!sVisibleRectNarrowed || root.getWidth() == 0) return;
+    sVisibleRectNarrowed = false;
+    if (app.organicmaps.MwmApplication.from(root.getContext()).getDisplayManager().isCarDisplayUsed()) return;
+    Framework.nativeSetVisibleRect(0, 0, root.getWidth(), root.getHeight());
+  }
+
+  /** How often, and how far apart, a fit waits for the route panel to be laid out (a cold start lays it out late). */
+  private static final int FIT_ATTEMPTS = 20;
+  private static final long FIT_RETRY_MS = 100;
+
+  /**
+   * The route panel grows once a journey arrives; frame the journey in the map area left visible: below the toolbar,
+   * above the panel and between the map's button columns. Until the panel is laid out (on a cold start the journey
+   * can arrive first) the fit is tried again; it is counted as done only once it has been made.
+   */
+  private void fitTransitToVisibleMap(int revision, int attempt)
+  {
+    mFrame.postDelayed(() -> {
+      if (RoutingController.get().getTransitFitRevision() != revision || mFittedTransitRevision == revision) return;
+      if (!isTransitType()) return;
+      if (!fitTransitNow())
+      {
+        if (attempt + 1 < FIT_ATTEMPTS) fitTransitToVisibleMap(revision, attempt + 1);
+        else mFittingTransitRevision = -1; // the next panel update tries again
+        return;
+      }
+      mFittedTransitRevision = revision;
+    }, attempt == 0 ? 0 : FIT_RETRY_MS);
+  }
+
+  /** Narrows the map's visible area to what the plan leaves uncovered and frames the journey in it. */
+  private boolean fitTransitNow()
+  {
+    return narrowVisibleMap(true);
+  }
+
+  /** The last visible area set, to notice when the panel or the toolbar changed size. */
+  private final android.graphics.Rect mVisibleMap = new android.graphics.Rect();
+
+  /**
+   * The panel grows and shrinks (a trip's card, the folded panel, the open steps) and the toolbar hides during a
+   * trip: keep the map's visible area to what they leave, so a followed position stays in the middle of it.
+   */
+  private final android.view.ViewTreeObserver.OnGlobalLayoutListener mLayoutWatcher = () -> {
+    if (sVisibleRectNarrowed && isTransitType() && mFittedTransitRevision == RoutingController.get().getTransitFitRevision())
+      narrowVisibleMap(false);
+  };
+
+  /** Shows or hides the plan's toolbar: a started trip needs no mode choice, and the map gets the room. */
+  private void showTripChrome(boolean trip)
+  {
+    UiUtils.showIf(!trip, getToolbar());
+    if (trip)
+    {
+      UiUtils.hide(mFrame.findViewById(R.id.route_mode_times));
+      UiUtils.hide(mRoutingOptionsBanner);
+    }
+  }
+
+  private boolean narrowVisibleMap(boolean refit)
+  {
+    if (mFrame.getHeight() == 0 || !mFrame.isAttachedToWindow()) return false;
+    View panel = mFrame.findViewById(R.id.transit_panel);
+    if (panel == null) panel = requireActivity().findViewById(R.id.transit_panel);
+    if (panel == null || !panel.isShown() || panel.getHeight() == 0) return false;
+    // Use the outermost panel card below the map, not the inner transit row.
+    View root = mFrame.getRootView();
+    while (panel.getParent() instanceof View parent && parent != root && parent.getHeight() < root.getHeight() * 0.9)
+      panel = parent;
+    int[] location = new int[2];
+    panel.getLocationOnScreen(location);
+    int panelTop = location[1];
+    int toolbarBottom = 0;
+    if (getToolbar().getVisibility() == View.VISIBLE)
+    {
+      // Below the mode times too, when they show.
+      View top = mFrame.findViewById(R.id.route_mode_times);
+      if (top == null || !top.isShown() || top.getHeight() == 0) top = getToolbar();
+      top.getLocationOnScreen(location);
+      toolbarBottom = location[1] + top.getHeight();
+      if (getToolbar().getHeight() == 0) return false;
+    }
+    int width = root.getWidth();
+    if (panelTop - toolbarBottom < (int) (120 * mFrame.getResources().getDisplayMetrics().density)) return false;
+    if (app.organicmaps.MwmApplication.from(mFrame.getContext()).getDisplayManager().isCarDisplayUsed()) return true;
+    // Keep the journey's ends clear of the map buttons on both sides (search, bookmarks; zoom, my position).
+    int left = 0, right = width;
+    View leftButtons = root.findViewById(R.id.map_buttons_inner_left);
+    if (leftButtons != null && leftButtons.isShown() && leftButtons.getWidth() > 0)
+    {
+      leftButtons.getLocationOnScreen(location);
+      left = Math.max(left, location[0] + leftButtons.getWidth());
+    }
+    View rightButtons = root.findViewById(R.id.map_buttons_inner_right);
+    if (rightButtons != null && rightButtons.isShown() && rightButtons.getWidth() > 0)
+    {
+      rightButtons.getLocationOnScreen(location);
+      right = Math.min(right, location[0]);
+    }
+    // Narrow screens keep at least half their width for the map.
+    if (right - left < width / 2) { left = 0; right = width; }
+    if (!refit && mVisibleMap.equals(new android.graphics.Rect(left, toolbarBottom, right, panelTop))) return true;
+    mVisibleMap.set(left, toolbarBottom, right, panelTop);
+    Framework.nativeSetVisibleRect(left, toolbarBottom, right, panelTop);
+    sVisibleRectNarrowed = true;
+    if (refit) RoutingController.get().refitTransit();
+    return true;
+  }
+
+  @androidx.annotation.Nullable
+  private final RouteModeTimes mModeTimes;
+
   private void updateProgressLabels()
   {
+    if (mModeTimes != null)
+      mModeTimes.update();
+    TransitRouteInfo shown = isTransitType() ? RoutingController.get().getCachedTransitInfo() : null;
+    showTripChrome(shown != null && shown.trip && RoutingController.get().getTransitStatus() == null);
     if (mIsPreviewingTurn)
     {
       mRoutingBottomMenuController.hideAltitudeChartAndRoutingDetails();
       return;
     }
 
+    RoutingController.TransitResult status = RoutingController.get().getTransitStatus();
+    if (isTransitType() && status != null)
+    {
+      mRoutingBottomMenuController.showTransitStatus(status);
+      return;
+    }
     RoutingController.BuildState buildState = RoutingController.get().getBuildState();
 
     final boolean ready = (buildState == RoutingController.BuildState.BUILT);
@@ -213,7 +350,15 @@ public class RoutingPlanController extends ToolbarController
     {
       TransitRouteInfo info = RoutingController.get().getCachedTransitInfo();
       if (info != null)
+      {
         mRoutingBottomMenuController.showTransitInfo(info);
+        int revision = RoutingController.get().getTransitFitRevision();
+        if (revision != mFittedTransitRevision && revision != mFittingTransitRevision)
+        {
+          mFittingTransitRevision = revision;
+          fitTransitToVisibleMap(revision, 0);
+        }
+      }
       return;
     }
 
@@ -232,6 +377,8 @@ public class RoutingPlanController extends ToolbarController
 
   public void updateBuildProgress(int progress, @NonNull Router router)
   {
+    if (mModeTimes != null)
+      mModeTimes.update();
     UiUtils.invisible(mProgressVehicle, mProgressPedestrian, mProgressTransit, mProgressBicycle, mProgressRuler);
     WheelProgressView progressView = switch (router)
     {
@@ -299,6 +446,12 @@ public class RoutingPlanController extends ToolbarController
   private boolean isRulerType()
   {
     return RoutingController.get().isRulerRouterType();
+  }
+
+  /** @return true if the back press closed the transit panel's open steps. */
+  public boolean collapseTransitSheet()
+  {
+    return mRoutingBottomMenuController.collapseTransitSheet();
   }
 
   void saveRoutingPanelState(@NonNull Bundle outState)

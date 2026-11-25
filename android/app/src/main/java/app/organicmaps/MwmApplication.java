@@ -135,6 +135,8 @@ public class MwmApplication extends Application implements Application.ActivityL
                                    BuildConfig.VERSION_CODE, BuildConfig.VERSION_NAME,
                                    BuildConfig.FILE_PROVIDER_AUTHORITY, mLocationProviderFactory);
 
+    app.organicmaps.sdk.routing.RoutingController.get().setTransitProvider(
+        new app.organicmaps.transit.RigaRouteProvider(this));
     ConnectionState.INSTANCE.initialize(this);
 
     DownloaderNotifier.createNotificationChannel(this);
@@ -151,6 +153,7 @@ public class MwmApplication extends Application implements Application.ActivityL
       ThemeSwitcher.INSTANCE.initialize(this);
       ThemeSwitcher.INSTANCE.restart(false);
       ProcessLifecycleOwner.get().getLifecycle().addObserver(mProcessLifecycleObserver);
+      app.organicmaps.transit.LatviaTimetables.attach(this);
       onComplete.run();
     });
   }
@@ -159,12 +162,16 @@ public class MwmApplication extends Application implements Application.ActivityL
     @Override
     public void onStart(@NonNull LifecycleOwner owner)
     {
+      app.organicmaps.sdk.routing.RoutingController.get().setTransitVisible(true);
       MwmApplication.this.onForeground();
+      if (mOrganicMaps.arePlatformAndCoreInitialized())
+        app.organicmaps.transit.LatviaTimetables.onForeground(MwmApplication.this);
     }
 
     @Override
     public void onStop(@NonNull LifecycleOwner owner)
     {
+      app.organicmaps.sdk.routing.RoutingController.get().setTransitVisible(false);
       MwmApplication.this.onBackground();
     }
   };
@@ -226,6 +233,8 @@ public class MwmApplication extends Application implements Application.ActivityL
       Logger.i(LOCATION_TAG, "Android Auto is active, keeping location in the background");
     else if (RoutingController.get().isNavigating())
       Logger.i(LOCATION_TAG, "Navigation is in progress, keeping location in the background");
+    else if (app.organicmaps.transit.RigaTripService.isRunning())
+      Logger.i(LOCATION_TAG, "A public transport trip is followed, keeping location in the background");
     else if (!Map.isEngineCreated() || LocationState.getMode() == LocationState.PENDING_POSITION)
       Logger.i(LOCATION_TAG, "PENDING_POSITION mode, keeping location in the background");
     else if (TrackRecorder.nativeIsTrackRecordingEnabled())

@@ -39,6 +39,8 @@
   //-->
   <uses-permission android:name="android.permission.WAKE_LOCK"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+  <!-- Android 16 Live Updates: the trip notification is shown as a promoted ongoing notification. -->
+  <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"/>
   <!--
@@ -58,6 +60,14 @@
       android:protectionLevel="dangerous" />
 
   <queries>
+    <!-- Riga ticket apps (Mobilly, Rīgas satiksme, Timey); their icons mark the validation shortcut. -->
+    <package android:name="lv.mobilly.android"/>
+    <package android:name="com.flutter.rspassenger"/>
+    <package android:name="com.ntacticsoftware.rigapublictransport"/>
+    <intent>
+      <action android:name="android.intent.action.VIEW"/>
+      <data android:scheme="rsat"/>
+    </intent>
     <intent>
       <action android:name="android.intent.action.TTS_SERVICE"/>
     </intent>
@@ -92,6 +102,15 @@
       android:networkSecurityConfig="@xml/network_security_config"
       android:manageSpaceActivity="${applicationId}.ManageSpaceActivity"
       tools:targetApi="33">
+
+    <activity android:name="app.organicmaps.settings.LiveFeedsSettingsActivity" android:exported="false"
+        android:parentActivityName="app.organicmaps.MwmActivity" />
+    <activity
+        android:name="app.organicmaps.transit.RigaJourneyActivity"
+        android:exported="false" />
+    <activity
+        android:name="app.organicmaps.transit.RigaTransitActivity"
+        android:exported="false" />
 
     <!-- Allows for config and orientation change without killing/restarting main activity -->
     <activity
@@ -492,6 +511,12 @@
         <data android:scheme="geo" />
       </intent-filter>
     </service>
+
+    <service
+        android:name=".transit.RigaTripService"
+        android:foregroundServiceType="location|dataSync"
+        android:exported="false"
+        android:stopWithTask="true"/>
 
     <service
         android:name=".routing.NavigationService"

@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="riga_transport">Riga public transport</string>
+  <string name="riga_download">Download / update offline timetables</string>
+  <string name="riga_intro">Download Rīgas satiksme timetables once to browse stop departures offline. Downloads connect to Latvia’s open-data portal. Live mode connects to saraksti.lv every 15 seconds while this screen is open.</string>
+  <string name="riga_offline">Scheduled departures · Europe/Riga\nService dates: %1$s\nSource: Rīgas satiksme · data.gov.lv (CC0)</string>
+  <string name="riga_live">Live vehicle positions</string>
+  <string name="riga_show_map">Show moving vehicles on map</string>
+  <string name="riga_search_stops">Search stops</string>
+  <string name="riga_search_routes">Filter by route number</string>
+  <string name="riga_downloading">Downloading and preparing offline timetables…</string>
+  <string name="riga_loading">Loading…</string>
+  <string name="riga_error">Could not update: %1$s. Downloaded timetables remain available offline.</string>
+  <string name="riga_live_error">Live positions unavailable. Switch off live mode to use downloaded timetables.</string>
+  <string name="riga_received">Positions received at %1$s from saraksti.lv. Vehicle observation times are not supplied. Tap a vehicle to show its reported location on the map.</string>
+  <string name="riga_no_departures">No scheduled departures in the next 24 hours. The timetable may have expired; try updating it.</string>
+  <string name="riga_no_stops">No matching stops. Try a shorter name, including Latvian accents.</string>
+  <string name="riga_no_vehicles">No vehicles match this route.</string>
+  <string name="riga_departure">%1$s · %2$s → %3$s</string>
+  <string name="riga_vehicle">%1$s %2$s · vehicle %3$s\n%4$.5f, %5$.5f</string>
+  <string name="riga_bus">Bus</string>
+  <string name="riga_tram">Tram</string>
+  <string name="riga_trolleybus">Trolleybus</string>
+  <string name="riga_train">Train</string>
+  <string name="riga_plan">Plan a journey</string>
+  <string name="riga_journey_intro">Stop-to-stop journeys using downloaded timetables. Up to 3 transfers, within 24 hours. Nearby platforms of the same stop have approximate walking times; allow 2 minutes for each transfer. Times use Europe/Riga.</string>
+  <string name="riga_choose_from">From: choose a stop</string>
+  <string name="riga_choose_to">To: choose a stop</string>
+  <string name="riga_from">From: %1$s</string>
+  <string name="riga_to">To: %1$s</string>
+  <string name="riga_leave_now">Leave now</string>
+  <string name="riga_depart_at">Depart at %1$s</string>
+  <string name="riga_choose_time">Choose departure time</string>
+  <string name="riga_use_estimates">Use live estimates (online)</string>
+  <string name="riga_need_timetable">Download or update offline timetables on the previous screen to enable journeys.</string>
+  <string name="riga_choose_stops">Choose your starting and destination stops.</string>
+  <string name="riga_same_stop">Choose two different stops.</string>
+  <string name="riga_planning">Finding a journey…</string>
+  <string name="riga_no_journey">No journey found in the next 24 hours with up to 3 transfers. Try a nearby platform or update the timetable.</string>
+  <string name="riga_journey_summary">Arrive %1$s · %2$d min · %3$d transfers</string>
+  <string name="riga_scheduled">Scheduled times · offline timetable</string>
+  <string name="riga_estimate_status">Live feed received %1$s · %2$d trips matched. Other trips use scheduled times. No vehicle observation timestamps are supplied. Recalculates every 30 seconds while this screen is open.</string>
+  <string name="riga_estimate_unavailable">Live estimates unavailable. Showing scheduled times.</string>
+  <string name="riga_estimate_future">Live estimates apply only to Leave now. Showing scheduled times.</string>
+  <string name="riga_ride_leg">%1$s–%2$s · %3$s %4$s → %5$s\nBoard: %6$s\nAlight: %7$s</string>
+  <string name="riga_estimated_leg">Provider estimate · vehicle %1$s · delay %2$+d sec</string>
+  <string name="riga_walk_leg">%1$s–%2$s · Walk between platforms, about %3$d m\n%4$s → %5$s</string>
+  <string name="riga_journey_map">Show journey on map</string>
+  <string name="riga_clear_journey">Clear journey from map</string>
+  <string name="riga_map_note">Map preview uses GTFS route shapes where available, otherwise straight stop connections. Grey lines are approximate platform walks. The preview is a snapshot; return here for updated journeys.</string>
+  <string name="riga_journey_failed">Could not plan this journey: %1$s</string>
+  <string name="riga_route_steps">Steps</string>
+  <string name="riga_public_transport">Public transport</string>
+  <string name="riga_live_consent_title">Use live times?</string>
+  <string name="riga_live_consent_body">CoMaps asks saraksti.lv for vehicle positions while this journey is visible. Your location is not sent. Times are estimates. Only vehicles relevant to your journey appear on the map.</string>
+  <string name="riga_live_agree">Use live times</string>
+  <string name="riga_live_disagree">Timetable only</string>
+  <string name="live_feeds">Live feeds</string>
+  <string name="live_feeds_summary">Live vehicle positions and delays</string>
+  <string name="live_feeds_sources">Sources</string>
+  <string name="live_feed_riga">Rīgas satiksme live positions</string>
+  <string name="live_feed_riga_summary">Trams, trolleybuses and buses in Rīga, from saraksti.lv</string>
+  <string name="live_feeds_none">No live feeds for your downloaded maps. Download the map of Latvia to use Rīga live positions.</string>
+  <string name="live_feeds_about">Live feeds are used only while a public transport route is shown. Your location is not sent. Timetables work offline and come with the downloaded maps.</string>
+  <string name="live_feeds_change_later">You can change this later in Settings → Live feeds.</string>
+  <string name="riga_live_journey">Live times and journey vehicles</string>
+  <string name="riga_installed">Latvia public transport timetables installed: %s</string>
+  <string name="riga_needs_timetable">Timetables for Latvia install automatically when you plan a public transport route.</string>
+  <string name="riga_installing">Installing public transport timetables for Latvia…</string>
+  <string name="riga_install_failed">Couldn’t download the timetables. Check your connection.</string>
+  <string name="riga_route_connect">Connect to the internet to download the public transport timetables.</string>
+  <string name="riga_route_retry">Try again</string>
+  <string name="riga_route_mobile">Download the public transport timetables over mobile data?</string>
+  <string name="riga_route_download">Download</string>
+  <string name="riga_route_finding">Finding stops and walking routes…</string>
+  <string name="riga_route_none">No public transport journey found for these points at this time.</string>
+  <string name="riga_route_geometry_failed">Couldn\'t draw this journey. Try updating the timetables.</string>
+  <string name="riga_route_update">Update timetables</string>
+  <string name="riga_route_maps">Download or update the Latvia map to route walking legs.</string>
+  <string name="riga_route_unreadable">Couldn\'t read the timetables.</string>
+  <string name="riga_route_failed">Couldn\'t plan this route. Try again.</string>
+  <string name="riga_route_live_failed">Live times unavailable. Last itinerary shown; times may have changed.</string>
+  <string name="riga_route_walk">Walk %1$d min, %2$d m</string>
+  <string name="riga_route_scheduled">scheduled</string>
+  <string name="riga_route_live_estimate">live estimate</string>
+  <string name="riga_route_scheduled_times">Scheduled times</string>
+  <string name="riga_route_live_scheduled">Live times unavailable. Showing scheduled times.</string>
+  <string name="riga_route_outdated">The installed timetables do not cover today.</string>
+  <plurals name="riga_stops_count"><item quantity="one">%d stop</item><item quantity="other">%d stops</item></plurals>
+  <plurals name="riga_ride_stops"><item quantity="one">Ride %d stop</item><item quantity="other">Ride %d stops</item></plurals>
+  <plurals name="riga_intermediate_stops"><item quantity="one">%d intermediate stop</item><item quantity="other">%d intermediate stops</item></plurals>
+  <string name="riga_itinerary">Journey details</string>
+  <!-- The route panel opens into the journey's steps: the grip's spoken name, state and announcements. -->
+  <string name="riga_sheet_show">Show all steps</string>
+  <string name="riga_sheet_hide">Hide steps</string>
+  <string name="riga_sheet_expanded">Steps expanded</string>
+  <string name="riga_sheet_collapsed">Steps collapsed</string>
+  <!-- Dragged down from its summary, the panel folds to its header and Start/End row. -->
+  <string name="riga_sheet_folded">Panel folded</string>
+  <string name="riga_chips_more">Show the whole route</string>
+  <string name="riga_chips_less">Show less of the route</string>
+  <string name="riga_sheet_unfold">Unfold panel</string>
+  <!-- During a trip, in the panel: where to get off the current or next ride, its time and the minutes left. -->
+  <string name="riga_trip_off_line">Get off at %1$s in %3$d min</string>
+  <!-- The same, as a row under "Then": a label column, then the stop, its time and the minutes left. -->
+  <string name="riga_trip_off_label">Get off</string>
+  <string name="riga_trip_off_row">%1$s · %2$s, in %3$d min</string>
+  <string name="riga_trip_off_row_now">%1$s · now</string>
+  <string name="riga_trip_off_line_now">Get off at %1$s · now</string>
+  <string name="riga_trip_quiet_alerts_channel">Public transport reminders</string>
+  <string name="riga_towards">Towards %s</string>
+  <string name="riga_board">Board at %s</string>
+  <string name="riga_alight">Get off at %s</string>
+  <string name="riga_wait">Wait %d min</string>
+  <string name="riga_hide_stops">Hide stops</string>
+  <string name="riga_live_at_stop">%1$s %2$s is at %3$s now</string>
+  <string name="riga_live_arriving">%1$s %2$s at your stop %3$s</string>
+  <plurals name="riga_live_stops_away">
+    <item quantity="one">%1$s %2$s is 1 stop away, at your stop %5$s</item>
+    <item quantity="other">%1$s %2$s is %3$d stops away, at your stop %5$s</item>
+  </plurals>
+  <string name="riga_live_now">now</string>
+  <string name="riga_departures_title">Departures</string>
+  <string name="riga_departures_scheduled">Timetable times</string>
+  <string name="riga_validate_mobilly">Validate in Mobilly · vehicle %1$s</string>
+  <string name="riga_validate_hint">After boarding, check that the number matches the sticker by the door</string>
+  <!-- A route looked up for earlier today: how long ago it left. -->
+  <plurals name="riga_live_minutes_ago">
+    <item quantity="one">%d min ago</item>
+    <item quantity="other">%d min ago</item>
+  </plurals>
+  <plurals name="riga_live_in_minutes">
+    <item quantity="one">in 1 min</item>
+    <item quantity="other">in %d min</item>
+  </plurals>
+  <string name="riga_live_leave">Leave %1$s. %2$s %3$s at %4$s from %5$s</string>
+  <!-- With the vehicle's live position above it, which says the line and when it comes. -->
+  <string name="riga_live_leave_short">Leave %1$s, walk to %2$s</string>
+  <string name="riga_live_arrive">Arrive %1$s</string>
+  <string name="riga_live_received">Live times received %1$s</string>
+  <string name="riga_alternatives_finding">Finding other routes…</string>
+  <!-- Route panel header when the first departure is long after the chosen time (at night nothing may run). -->
+  <string name="riga_wait_first_departure">First departure %1$s, in %2$s</string>
+  <!-- Under riga_wait_first_departure when walking (the time under the walking button) arrives sooner. -->
+  <!-- Banner when walking beats every ride. %s: walking time, e.g. "Walking is faster: 2 min". -->
+  <string name="riga_walk_all">Leave %1$s and walk the whole way</string>
+  <!-- %s: "Walking gets you there by 07:52"; the banner switches to walking directions when tapped. -->
+  <!-- When the shown journey leaves and arrives: "04:46–05:25". -->
+  <string name="riga_route_span" translatable="false">%1$s–%2$s</string>
+  <string name="riga_route_span_description">Leave %1$s, arrive %2$s</string>
+  <string name="riga_alternatives_later">Later</string>
+  <string name="riga_alternative_live">live</string>
+  <string name="riga_alternative_description">%1$d min route, leave %2$s, arrive %3$s</string>
+  <string name="riga_vehicle_number">Vehicle %1$s</string>
+  <string name="riga_vehicle_copied">Vehicle number %1$s copied</string>
+    <plurals name="riga_walk_minutes">
+        <item quantity="one">walk %d minute</item>
+        <item quantity="other">walk %d minutes</item>
+    </plurals>
+    <string name="riga_trip_start">Start</string>
+    <string name="riga_trip_end">End trip</string>
+    <plurals name="riga_trip_leave_in">
+        <item quantity="one">Leave in %1$d min · walk to %2$s</item>
+        <item quantity="other">Leave in %1$d min · walk to %2$s</item>
+    </plurals>
+    <string name="riga_trip_leave_now">Leave now · walk to %s</string>
+    <string name="riga_trip_walk_to_ride">Walk to %1$s · %2$s %3$s at %4$s</string>
+    <string name="riga_trip_walk_to">Walk to %s</string>
+    <string name="riga_trip_board">Board %1$s %2$s → %3$s at %4$s</string>
+    <plurals name="riga_trip_ride">
+        <item quantity="one">Get off at the next stop: %2$s</item>
+        <item quantity="other">Get off in %1$d stops: %2$s (%3$s)</item>
+    </plurals>
+    <string name="riga_trip_arrived">You have arrived</string>
+    <string name="riga_trip_missed">Missed %1$s %2$s? Plan again from here</string>
+    <string name="riga_trip_connection_missed">%1$s %2$s now leaves before you can reach it</string>
+    <!-- The small red button that ends a trip in the trip panel; read out as "End trip". -->
+  <string name="riga_trip_end_short">End</string>
+  <string name="riga_trip_replan">New route from here</string>
+    <string name="riga_trip_channel">Public transport trip</string>
+    <string name="riga_trip_alerts_channel">Public transport alerts</string>
+    <string name="riga_trip_alert_leave">Time to leave</string>
+    <string name="riga_trip_alert_board">%1$s %2$s is coming</string>
+    <string name="riga_trip_alert_off">Get off at the next stop</string>
+    <string name="riga_trip_alert_off_text">Next stop: %1$s, %2$s</string>
+    <!-- Trip notification, under what to do now: "Trolleybus 22 → Lubāna, arrive 05:25". -->
+    <string name="riga_trip_context">%1$s %2$s → %3$s, arrive %4$s</string>
+    <string name="riga_validate_in">Validate in %1$s · vehicle %2$s</string>
+    <string name="riga_validate_choose">Validate a ticket for vehicle %s</string>
+  <string name="riga_time_title">When</string>
+  <string name="riga_time_now">Leave now</string>
+  <string name="riga_time_link_invalid">The link\'s time could not be read, so the route is planned from now</string>
+  <string name="mode_time_unknown">–</string>
+  <string name="mode_time_description">%1$s: arrive %2$s, %3$s</string>
+  <!-- Times estimated from the distance or the timetable, before a route is built for that mode. -->
+  <string name="mode_time_description_approximate">%1$s: arrive about %2$s, about %3$s</string>
+  <string name="riga_time_arrive">Arrive by</string>
+  <string name="riga_time_other_day">Other day…</string>
+  <string name="riga_time_depart_at">Leave %1$s</string>
+  <string name="riga_time_arrive_by">Arrive by %1$s</string>
+  <!-- %1$s: time, e.g. "Leave tomorrow 08:00". -->
+  <string name="riga_time_depart_tomorrow">Leave tomorrow %1$s</string>
+  <!-- %1$s: time, e.g. "Arrive by tomorrow 08:00". -->
+  <string name="riga_time_arrive_tomorrow">Arrive by tomorrow %1$s</string>
+  <string name="riga_time_today">Today</string>
+  <string name="riga_time_tomorrow_day">Tomorrow</string>
+  <string name="riga_time_tomorrow">Tomorrow %1$s</string>
+  <string name="riga_time_none">No public transport arrives by %1$s from here.</string>
+  <string name="riga_alternatives_earlier">Earlier</string>
+  <!-- Map marker titles for live vehicles of the chosen route. %1$s: line number, %2$s: time received. -->
+  <string name="riga_vehicle_yours">%1$s, your ride (saraksti.lv, %2$s)</string>
+  <string name="riga_vehicle_same_line">%1$s, same line and direction (saraksti.lv, %2$s)</string>
+  <!-- Trip Live Update notification: one short title per step, a detail line and a status bar chip. -->
+  <plurals name="riga_trip_live_leave_in">
+    <item quantity="one">Leave in %d min</item>
+    <item quantity="other">Leave in %d min</item>
+  </plurals>
+  <string name="riga_trip_live_leave_now">Leave now</string>
+  <string name="riga_trip_live_walk">Walk to %s</string>
+  <!-- %1$s: mode (lower case), %2$s: line number, e.g. "Take tram 7". -->
+  <string name="riga_trip_live_take">Take %1$s %2$s</string>
+  <plurals name="riga_trip_live_get_off">
+    <item quantity="one">Get off at the next stop</item>
+    <item quantity="other">Get off in %d stops</item>
+  </plurals>
+  <!-- %1$s: stop or direction, %2$s: time. -->
+  <string name="riga_trip_live_departs">%1$s · departs %2$s</string>
+  <!-- %1$s: boarding stop, %2$s: mode (lower case), %3$s: line, %4$s: time, e.g. "Mazā Kalna iela · tram 7 at 07:18". -->
+  <string name="riga_trip_live_next_ride">%1$s · %2$s %3$s at %4$s</string>
+  <!-- %1$s: stop to get off at, %2$s: time, e.g. "Pavasara gatve · 07:40". -->
+  <!-- Arrival alert text. %1$s: destination, %2$s: time, e.g. "Lubānas iela, 125A at 07:53". -->
+  <string name="riga_trip_alert_arrived_text">%1$s at %2$s</string>
+  <string name="riga_trip_live_exit">%1$s · %2$s</string>
+  <!-- Status bar chip: keep within about 7 characters. -->
+  <string name="riga_trip_chip_minutes">%d min</string>
+  <string name="riga_trip_chip_now">Now</string>
+  <plurals name="riga_trip_chip_stops">
+    <item quantity="one">%d stop</item>
+    <item quantity="other">%d stops</item>
+  </plurals>
+  <!-- Ticket app button before the ride is matched to a live vehicle. %1$s: app name. -->
+  <string name="riga_validate_in_app">Validate in %1$s</string>
+  <string name="riga_validate_hint_scan">Scan the QR code by the door after boarding</string>
+  <!-- Route panel while following a journey: the step now (with a countdown) and the step after it. -->
+  <string name="riga_trip_label_leave">Leave in</string>
+  <string name="riga_trip_label_departs">Departs in</string>
+  <string name="riga_trip_label_off">Your stop in</string>
+  <string name="riga_trip_label_arrive">Arrive in</string>
+  <!-- %1$d: metres, %2$s: time at the stop. -->
+  <string name="riga_trip_walk_detail">%1$d m · at the stop by %2$s</string>
+  <string name="riga_trip_walk_final_detail">%1$d m · arrive %2$s</string>
+  <!-- %1$s: direction, %2$s: boarding stop, %3$s: time. -->
+  <string name="riga_trip_board_detail">→ %1$s · from %2$s at %3$s</string>
+  <!-- %1$d: stops left, %2$s: exit stop, %3$s: time. -->
+  <string name="riga_trip_then">Then</string>
+  <!-- %1$s: mode, %2$s: line, %3$s: direction, %4$s: time. -->
+  <string name="riga_trip_next_board">%1$s %2$s → %3$s at %4$s</string>
+  <!-- %1$d: walk minutes, %2$s: mode (lower case), %3$s: line, %4$s: time. -->
+  <string name="riga_trip_next_change">Walk %1$d min, then %2$s %3$s at %4$s</string>
+  <!-- %1$s: exit stop, %2$s: time, %3$d: stops. -->
+  <plurals name="riga_trip_next_off">
+    <item quantity="one">Get off at %1$s · %2$s, %3$d stop</item>
+    <item quantity="other">Get off at %1$s · %2$s, %3$d stops</item>
+  </plurals>
+  <!-- %1$d: minutes, %2$s: destination, %3$s: time. -->
+  <string name="riga_trip_next_walk">Walk %1$d min to %2$s · arrive %3$s</string>
+  <string name="riga_trip_next_walk_final">Walk %1$d min to %2$s</string>
+  <!-- The ticket button in the trip's "now" card, beside the line's badge: short, on one line. -->
+  <string name="riga_validate_short">Validate · %1$s</string>
+  <string name="riga_trip_next_arrive">Arrive at %1$s · %2$s</string>
+  <!-- Panel header while following: %1$s: time left, %2$s: arrival time. -->
+  <string name="riga_trip_remaining">%1$s left · arrive %2$s</string>
+  <!-- Steps sheet: the step the rider is on, and steps behind them (for screen readers). -->
+  <string name="riga_trip_now">Now</string>
+  <string name="riga_trip_done">Done</string>
+  <!-- Other departures of the same ride. %s: a list such as "2 min, 15 min" or "07:28, 07:45 (14)". -->
+  <string name="riga_also_in">Also in %s</string>
+  <string name="riga_also_at">Also at %s</string>
+  <!-- One departure of another line in an "Also at" list: %1$s: time, %2$s: line. -->
+  <string name="riga_also_line">%1$s (%2$s)</string>
+  <!-- A short change on foot between two rides. %1$d: minutes, %2$d: metres, %3$d: longest wait in minutes. -->
+  <string name="riga_route_change_wait">Walk %1$d min (%2$d m), then wait up to %3$d min</string>
+  <string name="riga_route_change">Walk %1$d min (%2$d m)</string>
+  <!-- Stops of a public transport route where the rider spends time. -->
+  <!-- %d: the stop's position on the route, e.g. "Stop 2". -->
+  <string name="riga_stay_unnamed">Stop %d</string>
+  <!-- %s: the stop's name. -->
+  <string name="riga_stay_unreachable">No way found to %s at this time.</string>
+  <string name="riga_stay_minutes">%d min</string>
+  <string name="riga_stay_hours">%d h</string>
+  <string name="riga_stay_hours_minutes">%1$d h %2$d min</string>
+  <!-- %1$s: the stop's name, %2$s: how long, e.g. "Rimi · 30 min". -->
+  <string name="riga_stay_title">%1$s · %2$s</string>
+  <!-- %1$s: arrival, %2$s: when the rider goes on. -->
+  <string name="riga_stay_times">Arrive %1$s · leave %2$s</string>
+  <string name="riga_stay_change">Change time</string>
+  <!-- %s: the stop's name. -->
+  <string name="riga_stay_pick_title">Time at %s</string>
+  <!-- %1$s: the stop's name, %2$s: when to leave. -->
+  <string name="riga_trip_stay">At %1$s · leave %2$s</string>
+  <!-- %1$s: the stop's name, %2$s: when to leave, %3$s: mode (lower case), %4$s: line, e.g. "At Rimi · leave 10:40 for tram 7". -->
+  <string name="riga_trip_stay_ride">At %1$s · leave %2$s for %3$s %4$s</string>
+  <!-- %s: the stop's name. -->
+  <string name="riga_trip_live_stay">At %s</string>
+  <!-- %s: when to leave. -->
+  <string name="riga_trip_live_stay_leave">Leave %s</string>
+  <!-- %1$s: when to leave, %2$s: mode (lower case), %3$s: line. -->
+  <string name="riga_trip_live_stay_ride">Leave %1$s for %2$s %3$s</string>
+  <!-- %s: the stop's name. -->
+  <string name="riga_trip_alert_stay">Time to leave %s soon</string>
+  <!-- %1$s: the stop's name, %2$s: when the rider goes on. -->
+  <string name="riga_trip_next_stay">Stay at %1$s until %2$s</string>
+  <!-- %s: the stop's name. A delay used up the time planned there. -->
+  <string name="riga_trip_stay_late">Running late: no time left at %s</string>
+  <!-- The end of the plan's summary, which opens and closes every step of the journey (with a chevron after it). -->
+  <!-- Opens search to add a stop to a public transport route. -->
+  <string name="riga_add_stop">Add stop</string>
+  <!-- A stop's chip in the route summary, for screen readers. %1$s: its number, %2$s: how long, e.g. "30 min". -->
+  <string name="riga_stay_chip_description">Stop %1$s, %2$s there. Change time</string>
+  <!-- The stay drop-down of a stop, for screen readers. %1$s: the stop's name, %2$s: how long. -->
+  <string name="riga_stay_change_description">Time at %1$s: %2$s. Change time</string>
+  <string name="riga_stay_remove">Remove stop</string>
+  <!-- The search box hint when search was opened to add a stop to the route. -->
+  <string name="riga_search_add_stop">Find a place to add as a stop</string>
+  <!-- A stop's stay in Manage Route, tap to change it. %s: how long, e.g. "Stay 30 min". -->
+  <string name="riga_stay_row">Stay %s</string>
+  <!-- When to travel: the choice of a time to leave at. -->
+  <string name="riga_time_leave_at">Leave at</string>
+  <!-- When to travel: back to leaving now, for screen readers. -->
+  <string name="riga_time_reset">Leave now instead</string>
+  <string name="riga_time_refresh">Plan again from here, now</string>
+  <string name="riga_time_short_now">Now</string>
+  <string name="riga_time_short_leave">Leave %1$s</string>
+  <string name="riga_time_short_arrive">Arrive %1$s</string>
+  <!-- Shown as a stop is added to a public transport trip: the stay, e.g. "30 min", and the stop's name. -->
+  <string name="riga_stay_added">Staying %1$s at %2$s</string>
+</resources>

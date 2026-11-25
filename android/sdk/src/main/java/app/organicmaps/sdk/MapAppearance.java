@@ -21,6 +21,8 @@ public enum MapAppearance
   public static void set(@NonNull MapAppearance mapAppearance)
   {
     nativeSet(mapAppearance.value);
+    // A drawn transport journey picks its colours for day or night when drawn.
+    app.organicmaps.sdk.routing.RoutingController.get().redrawTransit();
   }
 
   @NonNull

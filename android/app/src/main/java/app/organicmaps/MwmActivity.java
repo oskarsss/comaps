@@ -108,6 +108,7 @@ import app.organicmaps.sdk.routing.RouteMarkType;
 import app.organicmaps.sdk.routing.RoutingController;
 import app.organicmaps.sdk.routing.RoutingInfo;
 import app.organicmaps.sdk.routing.RoutingOptions;
+import app.organicmaps.sdk.routing.TransitRouteInfo;
 import app.organicmaps.sdk.search.SearchEngine;
 import app.organicmaps.sdk.settings.RoadType;
 import app.organicmaps.sdk.settings.UnitLocale;
@@ -281,6 +282,9 @@ public class MwmActivity extends BaseMwmFragmentActivity
   public void onRenderingInitializationFinished()
   {
     ThemeSwitcher.INSTANCE.restart(true);
+    // A recreated activity (a day/night switch recreates it) may have changed the map style while no map was
+    // drawn: draw the transport journey in the colours of the style now shown.
+    RoutingController.get().redrawTransit();
 
     Framework.nativeRestoreDownloadQueue();
 
@@ -515,6 +519,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
     // We don't need to manually handle removing the observers it follows the activity lifecycle
     mMapButtonsViewModel.getBottomButtonsHeight().observe(this, this::onMapBottomButtonsHeightChange);
     mMapButtonsViewModel.getLayoutMode().observe(this, this::initNavigationButtons);
+    mPlacePageViewModel.getMapObject().observe(this, object -> coverTransitPanel(object != null));
 
     mSearchController = new FloatingSearchToolbarController(this, this);
     mSearchController.getToolbar().setBackground(ContextCompat.getDrawable(this, R.drawable.bg_search_radius));
@@ -966,6 +971,26 @@ public class MwmActivity extends BaseMwmFragmentActivity
   }
 
   /**
+   * A place page opened over a public transport route would cover half of its panel: slide the panel away while
+   * the place page shows, and bring it back when the place page closes.
+   */
+  private void coverTransitPanel(boolean placePageOpen)
+  {
+    final View menu = findViewById(R.id.menu_frame);
+    if (menu == null)
+      return;
+    final boolean cover = placePageOpen && RoutingController.get().isTransitType() && menu.getVisibility() == View.VISIBLE;
+    if (cover == (menu.getTranslationY() > 0))
+      return;
+    menu.animate().cancel();
+    menu.animate()
+        .translationY(cover ? menu.getHeight() : 0)
+        .alpha(cover ? 0 : 1)
+        .setDuration(getResources().getInteger(R.integer.anim_default))
+        .start();
+  }
+
+  /**
    * @return False if the place page was already closed, true otherwise
    */
   public boolean closePlacePage()
@@ -1226,6 +1251,16 @@ public class MwmActivity extends BaseMwmFragmentActivity
     refreshLightStatusBar();
 
     MwmApplication.from(this).getSensorHelper().addListener(this);
+    followDuringTrip();
+  }
+
+  /** Coming back to the map while a transit trip is guided centres it on the rider again. */
+  private void followDuringTrip()
+  {
+    if (!app.organicmaps.transit.RigaTripService.isRunning() || !app.organicmaps.sdk.Map.isEngineCreated())
+      return;
+    if (LocationState.getMode() == LocationState.NOT_FOLLOW)
+      LocationState.nativeSwitchToNextMode();
   }
 
   @Override
@@ -1309,6 +1344,8 @@ public class MwmActivity extends BaseMwmFragmentActivity
     final RoutingController routingController = RoutingController.get();
     if (!closeBottomSheet(MAIN_MENU_ID) && !closeBottomSheet(LAYERS_MENU_ID) && !collapseNavMenu() && !closePlacePage()
         && !closeSearchToolbar(true, true) && !closeSidePanel() && !closePositionChooser()
+        && !(mRoutingPlanInplaceController != null && mRoutingPlanInplaceController.collapseTransitSheet())
+        && !endTransitTrip()
         && !exitRoutePreviewIfPreviewing()
         && !routingController.resetToPlanningStateIfNavigating() && !routingController.cancel())
     {
@@ -1321,6 +1358,16 @@ public class MwmActivity extends BaseMwmFragmentActivity
         // Sometimes this can be called after onSaveState() for unknown reason.
       }
     }
+  }
+
+  /** Back during a public transport trip does what End does: back to the plan, as back from navigation. */
+  private boolean endTransitTrip()
+  {
+    final TransitRouteInfo info = RoutingController.get().getCachedTransitInfo();
+    if (info == null || !info.trip || info.endTrip == null)
+      return false;
+    info.endTrip.run();
+    return true;
   }
 
   private boolean exitRoutePreviewIfPreviewing()
@@ -1671,6 +1718,7 @@ public class MwmActivity extends BaseMwmFragmentActivity
         updateCompassOffset(mCurrentWindowInsets.getInsets(WindowInsetsCompat.Type.systemBars()).top);
       else if (!mIsTabletLayout)
         mRoutingPlanInplaceController.show(false);
+      app.organicmaps.routing.RoutingPlanController.restoreVisibleMap(getWindow().getDecorView());
 
       closeAllFloatingPanelsTablet();
 
@@ -1806,6 +1854,25 @@ public class MwmActivity extends BaseMwmFragmentActivity
   public void onAddedStop()
   {
     closePlacePage();
+    // A stop on a public transport trip is a stay that delays the rest of the trip: say how long, offer to change it.
+    MapObject stop = RoutingController.get().getLastAddedStop();
+    if (stop == null || !RoutingController.get().isTransitType())
+      return;
+    String title = stop.getTitle().isEmpty() ? stop.getSubtitle() : stop.getTitle();
+    String name = title.isEmpty() ? getString(R.string.riga_stay_unnamed, 1) : title;
+    // After the stop-picking search has closed, so the message is seen over the map.
+    View host = findViewById(R.id.coordinator);
+    host.postDelayed(() -> {
+      if (isFinishing() || !RoutingController.get().isPlanning())
+        return;
+      View anchor = findViewById(R.id.transit_panel);
+      View root = getWindow().getDecorView();
+      while (anchor != null && anchor.getParent() instanceof View parent && parent != root
+             && parent.getHeight() < root.getHeight() * 0.9)
+        anchor = parent;
+      app.organicmaps.routing.StayPicker.announce(host, anchor != null && anchor.isShown() ? anchor : null, name,
+                                                  stop.getLat(), stop.getLon());
+    }, 600);
   }
 
   @Override
@@ -2034,7 +2101,9 @@ public class MwmActivity extends BaseMwmFragmentActivity
   @UiThread
   public void onCompassUpdated(double north)
   {
-    Map.onCompassUpdated(north, false);
+    // On a transit ride the map turns with the vehicle's way, not the compass, also while it stands.
+    final double ride = app.organicmaps.transit.RigaTripPanel.rideHeading(System.currentTimeMillis());
+    Map.onCompassUpdated(Double.isNaN(ride) ? north : ride, false);
     mNavigationController.updateNorth();
   }
 

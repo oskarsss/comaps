@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The stay at a stop of a public transport route, as a drop-down: "30 min ⌄" opens the stay picker. -->
+<com.google.android.material.button.MaterialButton xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
+  style="@style/Widget.Material3.Button.OutlinedButton"
+  android:layout_width="wrap_content"
+  android:layout_height="wrap_content"
+  android:layout_marginStart="8dp"
+  android:minWidth="0dp"
+  android:paddingStart="12dp"
+  android:paddingEnd="8dp"
+  android:fontFeatureSettings="tnum"
+  app:icon="@drawable/ic_expand_more"
+  app:iconGravity="end"
+  app:iconPadding="2dp"
+  app:iconSize="18dp"/>
