@@ -377,7 +377,9 @@ final class RoutingBottomMenuController implements View.OnClickListener
       return;
     }
 
-    Spanned spanned = makeSpannedRoutingDetails(mContext, rinfo);
+    final int stays = RouteStays.totalSeconds(mContext, Framework.nativeGetRoutePoints());
+    final String arrivalTime = Utils.formatArrivalTime(mContext, rinfo.totalTimeInSeconds + stays);
+    Spanned spanned = makeSpannedRoutingDetails(mContext, rinfo, mArrival == null ? arrivalTime : null);
     if (RoutingController.get().isVehicleRouterType())
     {
       UiUtils.show(mTimeVehicle);
@@ -390,10 +392,7 @@ final class RoutingBottomMenuController implements View.OnClickListener
     }
 
     if (mArrival != null)
-    {
-      String arrivalTime = Utils.formatArrivalTime(rinfo.totalTimeInSeconds);
       mArrival.setText(arrivalTime);
-    }
   }
 
   // Scroll RecyclerView to bottom using parent ScrollView.
@@ -405,7 +404,8 @@ final class RoutingBottomMenuController implements View.OnClickListener
   }
 
   @NonNull
-  private static Spanned makeSpannedRoutingDetails(@NonNull Context context, @NonNull RoutingInfo routingInfo)
+  private static Spanned makeSpannedRoutingDetails(@NonNull Context context, @NonNull RoutingInfo routingInfo,
+                                                   @Nullable String arrivalTime)
 
   {
     CharSequence time =
@@ -418,6 +418,12 @@ final class RoutingBottomMenuController implements View.OnClickListener
     initDotBuilderSequence(context, dot, builder);
 
     initDistanceBuilderSequence(context, routingInfo.distToTarget.toString(context), builder);
+
+    if (arrivalTime != null)
+    {
+      initDotBuilderSequence(context, dot, builder);
+      initDistanceBuilderSequence(context, arrivalTime, builder);
+    }
 
     return builder;
   }

@@ -664,6 +664,10 @@
     <string name="button_plan">Plan</string>
     <string name="placepage_remove_stop">Remove Stop</string>
     <string name="placepage_add_stop">Add Stop</string>
+    <string name="route_stay_add">Set stay time</string>
+    <string name="route_stay_row">Stay %s</string>
+    <string name="route_stay_none">No stay</string>
+    <string name="route_stay_pick_title">Time at %s</string>
     <string name="saved">Saved</string>
     <string name="dialog_error_storage_title">Storage access problem</string>
     <string name="dialog_error_storage_message">External storage is not accessible. The SD card may have been removed, damaged, or the file system is read-only. Please, check your SD card or contact us at support@comaps.app</string>

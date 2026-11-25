@@ -56,9 +56,29 @@
     app:layout_constraintStart_toEndOf="@id/type_icon"
     app:layout_constraintEnd_toStartOf="@id/reorder_icon"
     app:layout_constraintTop_toBottomOf="@id/title"
-    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintBottom_toTopOf="@id/stay"
     app:layout_constrainedWidth="true"
     tools:text="Subtitle"/>
+
+  <com.google.android.material.button.MaterialButton
+    android:id="@+id/stay"
+    style="@style/Widget.Material3.Button.TextButton"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:minHeight="40dp"
+    android:insetTop="0dp"
+    android:insetBottom="0dp"
+    android:paddingStart="6dp"
+    android:paddingEnd="10dp"
+    android:visibility="gone"
+    app:layout_constraintStart_toEndOf="@id/type_icon"
+    app:layout_constraintEnd_toStartOf="@id/reorder_icon"
+    app:layout_constraintHorizontal_bias="0"
+    app:layout_constrainedWidth="true"
+    app:layout_constraintTop_toBottomOf="@id/subtitle"
+    app:layout_constraintBottom_toBottomOf="parent"
+    tools:visibility="visible"
+    tools:text="Stay 30 min"/>
 
   <com.google.android.material.imageview.ShapeableImageView
       android:id="@+id/reorder_icon"

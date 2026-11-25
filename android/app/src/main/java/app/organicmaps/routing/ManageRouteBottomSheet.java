@@ -146,6 +146,14 @@ public class ManageRouteBottomSheet
   }
 
   @Override
+  public void onStayChanged()
+  {
+    final RoutingController controller = RoutingController.get();
+    if (controller.isPlanning() && controller.isBuilt() && getActivity() instanceof RoutingController.Container c)
+      c.updateBuildProgress(100, controller.getLastRouterType());
+  }
+
+  @Override
   public void startDrag(RecyclerView.ViewHolder viewHolder)
   {
     // Start dragging.

@@ -16,6 +16,7 @@ import app.organicmaps.sdk.routing.RouteMarkData;
 import app.organicmaps.sdk.routing.RouteMarkType;
 import app.organicmaps.sdk.util.StringUtils;
 import app.organicmaps.util.UiUtils;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.imageview.ShapeableImageView;
 import com.google.android.material.textview.MaterialTextView;
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ public class ManageRouteAdapter extends RecyclerView.Adapter<ManageRouteAdapter.
     void startDrag(RecyclerView.ViewHolder viewHolder);
     void showMyLocationIcon(boolean showMyLocationIcon);
     void onRoutePointDeleted(RecyclerView.ViewHolder viewHolder);
+    void onStayChanged();
   }
 
   public ManageRouteAdapter(Context context, RouteMarkData[] routeMarkData, ManageRouteListener listener)
@@ -121,6 +123,23 @@ public class ManageRouteAdapter extends RecyclerView.Adapter<ManageRouteAdapter.
     });
 
     holder.mImageViewDelete.setOnClickListener(v -> mManageRouteListener.onRoutePointDeleted(holder));
+
+    bindStay(holder, mRoutePoints.get(position), title);
+  }
+
+  private void bindStay(@NonNull ManageRouteViewHolder holder, @NonNull RouteMarkData point, @NonNull String name)
+  {
+    final boolean shown = point.mPointType == RouteMarkType.Intermediate;
+    UiUtils.showIf(shown, holder.mStay);
+    if (!shown)
+      return;
+    holder.mStay.setText(StayPicker.rowLabel(mContext, RouteStays.getMinutes(mContext, point.mLat, point.mLon)));
+    holder.mStay.setOnClickListener(v -> StayPicker.pick(mContext, name, point.mLat, point.mLon, () -> {
+      final int at = holder.getBindingAdapterPosition();
+      if (at != RecyclerView.NO_POSITION)
+        notifyItemChanged(at);
+      mManageRouteListener.onStayChanged();
+    }));
   }
 
   @Override
@@ -234,6 +253,9 @@ public class ManageRouteAdapter extends RecyclerView.Adapter<ManageRouteAdapter.
     @NonNull
     public final ShapeableImageView mImageViewDelete;
 
+    @NonNull
+    public final MaterialButton mStay;
+
     ManageRouteViewHolder(@NonNull View itemView)
     {
       super(itemView);
@@ -244,6 +266,7 @@ public class ManageRouteAdapter extends RecyclerView.Adapter<ManageRouteAdapter.
       mImageViewSwap = itemView.findViewById(R.id.reorder_icon);
       mViewDivider = itemView.findViewById(R.id.divider);
       mImageViewDelete = itemView.findViewById(R.id.delete_icon);
+      mStay = itemView.findViewById(R.id.stay);
     }
   }
 }

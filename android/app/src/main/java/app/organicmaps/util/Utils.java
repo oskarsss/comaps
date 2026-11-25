@@ -43,14 +43,15 @@ import app.organicmaps.MwmApplication;
 import app.organicmaps.R;
 import app.organicmaps.sdk.util.Config;
 import app.organicmaps.sdk.util.Constants;
+import app.organicmaps.sdk.util.DateUtils;
 import app.organicmaps.sdk.util.Distance;
-import app.organicmaps.sdk.util.StringUtils;
 import app.organicmaps.sdk.util.concurrency.UiThread;
 import app.organicmaps.sdk.util.log.Logger;
 import app.organicmaps.sdk.util.log.LogsManager;
 import com.google.android.material.snackbar.Snackbar;
 import java.lang.ref.WeakReference;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
@@ -481,10 +482,10 @@ public class Utils
   }
 
   @NonNull
-  public static String formatArrivalTime(int seconds)
+  public static String formatArrivalTime(@NonNull Context context, int seconds)
   {
     final LocalTime time = LocalTime.now().plusSeconds(seconds);
-    return StringUtils.formatUsingUsLocale("%d:%02d", time.getHour(), time.getMinute());
+    return time.format(DateTimeFormatter.ofPattern(DateUtils.is24HourFormat(context) ? "H:mm" : "h:mm a"));
   }
 
   @NonNull
