@@ -668,6 +668,8 @@
     <string name="route_stay_row">Stay %s</string>
     <string name="route_stay_none">No stay</string>
     <string name="route_stay_pick_title">Time at %s</string>
+    <string name="mode_time_description">%1$s: arrive %2$s, %3$s</string>
+    <string name="mode_time_description_approximate">%1$s: arrive about %2$s, about %3$s</string>
     <string name="saved">Saved</string>
     <string name="dialog_error_storage_title">Storage access problem</string>
     <string name="dialog_error_storage_message">External storage is not accessible. The SD card may have been removed, damaged, or the file system is read-only. Please, check your SD card or contact us at support@comaps.app</string>

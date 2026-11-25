@@ -147,6 +147,14 @@
     </com.google.android.material.appbar.MaterialToolbar>
   </FrameLayout>
   <FrameLayout
+    android:id="@+id/route_mode_times"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?colorPrimary"
+    android:paddingBottom="6dp"
+    android:visibility="gone"
+    tools:visibility="visible" />
+  <FrameLayout
     android:id="@+id/routing_options_banner"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"

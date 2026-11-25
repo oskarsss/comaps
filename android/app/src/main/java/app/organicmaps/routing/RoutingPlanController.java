@@ -64,6 +64,9 @@ public class RoutingPlanController extends ToolbarController
   @NonNull
   private final View.OnLayoutChangeListener mRoutingOptionsLayoutListener;
 
+  @NonNull
+  private final RouteModeTimes mModeTimes;
+
   private void setupRouterButton(@IdRes int buttonId, final @DrawableRes int iconRes,
                                  View.OnClickListener clickListener)
   {
@@ -92,6 +95,8 @@ public class RoutingPlanController extends ToolbarController
     mRoutingPlanListener = routingPlanListener;
 
     mRouterTypes = getToolbar().findViewById(R.id.route_type);
+    mModeTimes = new RouteModeTimes(mFrame.findViewById(R.id.route_mode_times), getToolbar(),
+                                    () -> mRoutingPlanListener.onRoutingPlanStartAnimate(UiUtils.isVisible(mFrame)));
 
     setupRouterButtons();
 
@@ -193,6 +198,7 @@ public class RoutingPlanController extends ToolbarController
 
   private void updateProgressLabels()
   {
+    mModeTimes.update();
     if (mIsPreviewingTurn)
     {
       mRoutingBottomMenuController.hideAltitudeChartAndRoutingDetails();
